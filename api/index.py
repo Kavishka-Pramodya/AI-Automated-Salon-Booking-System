@@ -75,11 +75,14 @@ def query_gemini(user_msg, prompt=SALON_CHAT_PROMPT):
             continue
     return None
 
+@app.route('/', methods=['GET'])
+@app.route('/health', methods=['GET'])
 @app.route('/api', methods=['GET'])
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok", "service": "Chanu Salon Serverless API"})
 
+@app.route('/config', methods=['GET'])
 @app.route('/api/config', methods=['GET'])
 def get_config():
     config = {
@@ -93,6 +96,7 @@ def get_config():
     }
     return jsonify(config)
 
+@app.route('/chat', methods=['POST'])
 @app.route('/api/chat', methods=['POST'])
 def chat():
     req_data = request.get_json(silent=True) or {}
@@ -117,10 +121,10 @@ def chat():
 
     return jsonify({"reply": ai_reply})
 
+@app.route('/whatsapp_webhook', methods=['GET', 'POST'])
 @app.route('/api/whatsapp_webhook', methods=['GET', 'POST'])
 def whatsapp_webhook():
     if request.method == 'GET':
-        # Meta verification challenge
         hub_mode = request.args.get('hub.mode')
         hub_challenge = request.args.get('hub.challenge')
         if hub_mode and hub_challenge:
@@ -150,7 +154,6 @@ def whatsapp_webhook():
     }
     return jsonify(result)
 
-# Alias for Vercel Serverless Function compatibility
 handler = app
 
 if __name__ == '__main__':
