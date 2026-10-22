@@ -173,9 +173,36 @@ def handle_whatsapp():
         return "WhatsApp Webhook Active", 200
 
     data = request.get_json(silent=True) or {}
-    sender = data.get("sender") or data.get("phone") or data.get("from") or "0781468988"
-    name = data.get("sender_name") or data.get("name") or data.get("profile_name") or "WhatsApp Client"
-    message = data.get("message") or data.get("body") or data.get("text") or "Hello"
+    sender = ""
+    name = ""
+    message = ""
+
+    # 1. Check for Meta webhook nested structure
+    try:
+        entries = data.get("entry", [])
+        if entries and isinstance(entries, list):
+            changes = entries[0].get("changes", [])
+            if changes:
+                val = changes[0].get("value", {})
+                msgs = val.get("messages", [])
+                if msgs:
+                    sender = msgs[0].get("from", "")
+                    text_obj = msgs[0].get("text", {})
+                    message = text_obj.get("body", "")
+                contacts = val.get("contacts", [])
+                if contacts:
+                    profile = contacts[0].get("profile", {})
+                    name = profile.get("name", "")
+    except Exception:
+        pass
+
+    # 2. Fallback to direct keys
+    if not sender:
+        sender = data.get("sender") or data.get("phone") or data.get("from") or "0781468988"
+    if not name:
+        name = data.get("sender_name") or data.get("name") or data.get("profile_name") or "WhatsApp Client"
+    if not message:
+        message = data.get("message") or data.get("body") or data.get("text") or "Hello"
 
     # Automatically save lead to Cloud Firestore
     lead_saved = save_lead_to_firestore(
