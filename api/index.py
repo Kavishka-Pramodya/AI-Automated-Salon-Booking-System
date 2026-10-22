@@ -75,16 +75,7 @@ def query_gemini(user_msg, prompt=SALON_CHAT_PROMPT):
             continue
     return None
 
-@app.route('/', methods=['GET'])
-@app.route('/health', methods=['GET'])
-@app.route('/api', methods=['GET'])
-@app.route('/api/health', methods=['GET'])
-def health():
-    return jsonify({"status": "ok", "service": "Chanu Salon Serverless API"})
-
-@app.route('/config', methods=['GET'])
-@app.route('/api/config', methods=['GET'])
-def get_config():
+def handle_config():
     config = {
         "apiKey": os.environ.get("FIREBASE_API_KEY", ""),
         "authDomain": os.environ.get("FIREBASE_AUTH_DOMAIN", ""),
@@ -96,9 +87,7 @@ def get_config():
     }
     return jsonify(config)
 
-@app.route('/chat', methods=['POST'])
-@app.route('/api/chat', methods=['POST'])
-def chat():
+def handle_chat():
     req_data = request.get_json(silent=True) or {}
     message = req_data.get("message", "").strip()
 
@@ -121,9 +110,7 @@ def chat():
 
     return jsonify({"reply": ai_reply})
 
-@app.route('/whatsapp_webhook', methods=['GET', 'POST'])
-@app.route('/api/whatsapp_webhook', methods=['GET', 'POST'])
-def whatsapp_webhook():
+def handle_whatsapp():
     if request.method == 'GET':
         hub_mode = request.args.get('hub.mode')
         hub_challenge = request.args.get('hub.challenge')
@@ -153,6 +140,24 @@ def whatsapp_webhook():
         "lead_ready": True
     }
     return jsonify(result)
+
+# Catch-all and smart route dispatcher
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
+def dispatch(path):
+    clean = path.strip('/').lower()
+    req_full = request.path.strip('/').lower()
+
+    if clean.endswith('config') or req_full.endswith('config'):
+        return handle_config()
+    elif clean.endswith('chat') or req_full.endswith('chat'):
+        return handle_chat()
+    elif clean.endswith('whatsapp_webhook') or req_full.endswith('whatsapp_webhook'):
+        return handle_whatsapp()
+    elif clean.endswith('health') or req_full.endswith('health') or clean == 'api' or clean == '':
+        return jsonify({"status": "ok", "service": "Chanu Salon Serverless API", "active": True})
+
+    return jsonify({"error": "Route not found", "path": path, "request_path": request.path}), 404
 
 handler = app
 
