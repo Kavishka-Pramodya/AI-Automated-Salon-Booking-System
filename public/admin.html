@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chanu Salon | Real-Time Cloud CRM Portal</title>
+    <title>Chanu Salon | Admin Operations & CRM Command Centre</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,36 +15,49 @@
 </head>
 <body>
 
-    <!-- 1. Admin PIN Passcode Protection Modal -->
+    <!-- 1. Admin PIN Passcode Protection Modal (Fallback if directly accessed) -->
     <div class="auth-overlay" id="adminAuthOverlay">
         <div class="auth-card">
             <div class="auth-crown"><i class="fas fa-shield-alt"></i></div>
-            <h2>Admin CRM Access</h2>
-            <p>Enter your salon administrator passcode to unlock the live cloud dashboard.</p>
+            <h2>Admin Sanctuary Access</h2>
+            <p>Enter your salon administrator passcode to unlock the administrative console and CRM portal.</p>
             <form onsubmit="loginAdmin(event)">
                 <input type="password" id="adminPin" class="pin-input" placeholder="••••••••" required autofocus>
-                <button type="submit" class="btn-unlock">Unlock CRM Dashboard</button>
+                <button type="submit" class="btn-unlock">Unlock Admin Console</button>
             </form>
-            <p style="font-size: 11.5px; color: #94a3b8; margin-top: 14px;">Default Passcode: <code>chanu2025</code></p>
+            <p style="font-size: 11.5px; color: #94a3b8; margin-top: 14px;">Default Passcode: <code>chanu2025</code> or <code>admin123</code></p>
         </div>
     </div>
 
-    <!-- 2. CRM Dashboard Workspace -->
+    <!-- 2. Admin Workspace -->
     <div id="crmDashboard" style="display: none; width: 100%;">
         
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <i class="fas fa-crown text-pink" style="color: #f472b6;"></i>
-                <span>CHANU CRM</span>
+                <span>CHANU ADMIN</span>
             </div>
 
             <nav class="sidebar-menu">
-                <a href="#overview" id="sideTabOverview" class="active" onclick="switchAdminTab('overview', this)"><i class="fas fa-tachometer-alt"></i> <span>Live Dashboard</span></a>
-                <a href="#bookings" id="sideTabBookings" onclick="switchAdminTab('bookings', this)"><i class="fas fa-calendar-check"></i> <span>Appointments CRM</span></a>
-                <a href="#whatsapp" id="sideTabWhatsapp" onclick="switchAdminTab('whatsapp', this)"><i class="fab fa-whatsapp"></i> <span>WhatsApp Leads</span></a>
-                <a href="#clients" id="sideTabClients" onclick="switchAdminTab('clients', this)"><i class="fas fa-users"></i> <span>Client Directory</span></a>
-                <a href="index.html"><i class="fas fa-external-link-alt"></i> <span>Open Sanctuary Home</span></a>
+                <a href="#overview" id="nav-overview" class="active" onclick="switchAdminTab('overview')">
+                    <i class="fas fa-tachometer-alt"></i> <span>Dashboard Overview</span>
+                </a>
+                <a href="#services-manage" id="nav-services" onclick="switchAdminTab('services')">
+                    <i class="fas fa-list-alt"></i> <span>Services Management</span>
+                </a>
+                <a href="#users-manage" id="nav-users" onclick="switchAdminTab('users')">
+                    <i class="fas fa-users-cog"></i> <span>User Management</span>
+                </a>
+                <a href="#schedule-manage" id="nav-schedule" onclick="switchAdminTab('schedule')">
+                    <i class="fas fa-clock"></i> <span>Working Hours</span>
+                </a>
+                <a href="#crm-portal" id="nav-crm" onclick="switchAdminTab('crm')" style="background: rgba(225, 29, 72, 0.15); color: #f43f5e;">
+                    <i class="fas fa-rocket"></i> <span>CRM Portal</span>
+                </a>
+                <a href="index.html" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> <span>Open Sanctuary Web</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -54,127 +67,411 @@
             </div>
         </aside>
 
-        <!-- Main CRM Panel -->
+        <!-- Main Workspace -->
         <main class="main-crm">
             
             <!-- Top Bar -->
             <header class="top-bar">
                 <div>
-                    <h1>Omnichannel Salon CRM & Admin Portal</h1>
+                    <h1 id="pageTitleText">Salon Administrative Management</h1>
                     <div class="live-indicator">
                         <span class="live-dot"></span>
-                        <span>LIVE FIRESTORE REAL-TIME SYNC</span>
+                        <span id="liveStatusText">LIVE CLOUD SYSTEM • SUPER ADMIN</span>
                     </div>
                 </div>
 
                 <div class="top-actions">
-                    <button class="filter-pill active" id="btnViewStream" onclick="switchCRMSection('stream', this)"><i class="fas fa-stream"></i> Bookings Stream</button>
-                    <button class="filter-pill" id="btnViewClients" onclick="switchCRMSection('clients', this)"><i class="fas fa-users"></i> Client CRM</button>
-                    <a href="index.html" class="btn-view-site">
-                        <i class="fas fa-store"></i> View Client Sanctuary
+                    <!-- Prominent CRM Launch Button -->
+                    <button class="btn-launch-crm" onclick="switchAdminTab('crm')">
+                        <i class="fas fa-rocket"></i> Open CRM Portal
+                    </button>
+                    <a href="index.html" class="btn-view-site" target="_blank">
+                        <i class="fas fa-store"></i> View Client Store
                     </a>
-                    <button class="filter-pill" style="color: #ef4444; border-color: #fca5a5;" onclick="logoutAdmin()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    <button class="filter-pill" style="color: #ef4444; border-color: #fca5a5;" onclick="logoutAdmin()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                 </div>
             </header>
 
-            <!-- 4 Glow Metric Stat Cards -->
-            <section class="stats-grid">
-                <div class="stat-card" style="cursor: pointer;" onclick="switchAdminTab('overview')">
-                    <div class="stat-label"><i class="fas fa-calendar-day"></i> Today's Appointments</div>
-                    <div class="stat-val" id="statToday">0</div>
-                </div>
-
-                <div class="stat-card blue" style="cursor: pointer;" onclick="switchAdminTab('bookings')">
-                    <div class="stat-label"><i class="fas fa-calendar-alt"></i> Upcoming Bookings</div>
-                    <div class="stat-val" id="statUpcoming">0</div>
-                </div>
-
-                <div class="stat-card gold">
-                    <div class="stat-label"><i class="fas fa-coins"></i> Total Projected Revenue</div>
-                    <div class="stat-val" id="statRevenue">Rs. 0</div>
-                </div>
-
-                <div class="stat-card green" style="cursor: pointer;" onclick="switchAdminTab('clients')">
-                    <div class="stat-label"><i class="fas fa-users"></i> Unique Client Base</div>
-                    <div class="stat-val" id="statClients">0 Clients</div>
-                </div>
-            </section>
-
-            <!-- 1. Appointments & Leads Table Section -->
-            <section class="crm-card" id="sectionStream">
-                <div class="crm-card-header">
-                    <h2><i class="fas fa-stream text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Real-Time Booking & Lead Stream</h2>
-                    
-                    <div class="filter-bar">
-                        <button class="filter-pill active" id="pillAll" onclick="setFilter('all', this)">All Stream</button>
-                        <button class="filter-pill" id="pillWeb" onclick="setFilter('website', this)"><i class="fas fa-globe"></i> Website</button>
-                        <button class="filter-pill" id="pillWA" onclick="setFilter('whatsapp', this)"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                        <button class="filter-pill" id="pillConf" onclick="setFilter('confirmed', this)">Confirmed Only</button>
+            <!-- ==========================================
+                 TAB 1: DASHBOARD OVERVIEW
+                 ========================================== -->
+            <div id="tabOverview" class="tab-pane active">
+                <!-- 4 KPI Stat Cards -->
+                <section class="stats-grid">
+                    <div class="stat-card" style="cursor: pointer;" onclick="switchAdminTab('crm')">
+                        <div class="stat-label"><i class="fas fa-calendar-day"></i> Today's Appointments</div>
+                        <div class="stat-val" id="statToday">0</div>
                     </div>
-                </div>
 
-                <div class="table-responsive">
-                    <table class="crm-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Channel</th>
-                                <th>Customer & Phone</th>
-                                <th>Service</th>
-                                <th>Date & Time</th>
-                                <th>Price</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="crmTableBody">
-                            <tr>
-                                <td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">
-                                    <i class="fas fa-spinner fa-spin"></i> Connecting to live Cloud Firestore database...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                    <div class="stat-card blue" style="cursor: pointer;" onclick="switchAdminTab('crm')">
+                        <div class="stat-label"><i class="fas fa-calendar-alt"></i> Upcoming Bookings</div>
+                        <div class="stat-val" id="statUpcoming">0</div>
+                    </div>
 
-            <!-- 2. Client CRM Directory Section -->
-            <section class="crm-card" id="sectionClients" style="display: none; margin-top: 24px;">
-                <div class="crm-card-header">
-                    <h2><i class="fas fa-users text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Client CRM Directory & History</h2>
-                    <span style="font-size: 13px; color: #64748b;">Consolidated client profiles from Website & WhatsApp bookings</span>
-                </div>
+                    <div class="stat-card gold" style="cursor: pointer;" onclick="switchAdminTab('services')">
+                        <div class="stat-label"><i class="fas fa-magic"></i> Active Salon Services</div>
+                        <div class="stat-val" id="statServicesCount">4 Services</div>
+                    </div>
 
-                <div class="table-responsive">
-                    <table class="crm-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Client Name</th>
-                                <th>Contact Phone</th>
-                                <th>Total Visits</th>
-                                <th>Total Spend</th>
-                                <th>Last Service Booked</th>
-                                <th>Preferred Channel</th>
-                                <th>Direct Outreach</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clientsTableBody">
-                            <tr>
-                                <td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">
-                                    Loading client CRM profiles...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                    <div class="stat-card green" style="cursor: pointer;" onclick="switchAdminTab('users')">
+                        <div class="stat-label"><i class="fas fa-users"></i> Registered Users</div>
+                        <div class="stat-val" id="statUsersCount">0 Users</div>
+                    </div>
+                </section>
+
+                <!-- Quick Operational Shortcuts -->
+                <section class="crm-card" style="margin-bottom: 24px;">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-bolt text-pink" style="color: var(--crm-primary);"></i> Quick Salon Operations</h2>
+                    </div>
+                    <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+                        <button class="btn-save-form" onclick="switchAdminTab('services')">
+                            <i class="fas fa-plus"></i> Add New Salon Service
+                        </button>
+                        <button class="btn-save-form" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);" onclick="switchAdminTab('users')">
+                            <i class="fas fa-user-plus"></i> Add New User / Admin
+                        </button>
+                        <button class="btn-launch-crm" onclick="switchAdminTab('crm')">
+                            <i class="fas fa-chart-line"></i> View Real-Time CRM & WhatsApp Leads
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Today's Live Schedule Preview -->
+                <section class="crm-card">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-clock text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Today's Scheduled Appointments</h2>
+                        <span id="todayDateBadge" style="font-size: 13px; color: #64748b;"></span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Time</th>
+                                    <th>Customer & Phone</th>
+                                    <th>Service</th>
+                                    <th>Channel</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="todayScheduleBody">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">
+                                        Loading today's schedule...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ==========================================
+                 TAB 2: SERVICES MANAGEMENT (XAMPP Replica)
+                 ========================================== -->
+            <div id="tabServices" class="tab-pane">
+                <!-- Add New Service Card -->
+                <section class="crm-card" style="margin-bottom: 24px;">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-plus-circle text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> <span id="serviceFormTitle">Add New Salon Service (නව සේවාවක් එක් කරන්න)</span></h2>
+                        <span style="font-size: 12.5px; color: #64748b;">Saved services instantly sync to client booking page</span>
+                    </div>
+
+                    <form id="serviceManageForm" onsubmit="handleSaveService(event)">
+                        <input type="hidden" id="editServiceId" value="">
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label for="serviceName"><i class="fas fa-signature"></i> Service Name (සේවා නම)</label>
+                                <input type="text" id="serviceName" class="form-input" placeholder="e.g. Keratin Smooth Therapy" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="serviceCategory"><i class="fas fa-tags"></i> Category (වර්ගය)</label>
+                                <select id="serviceCategory" class="form-select" required>
+                                    <option value="Hair Treatments">Hair Treatments</option>
+                                    <option value="Facial & Skin Treatments">Facial & Skin Treatments</option>
+                                    <option value="Color Artistry">Color Artistry</option>
+                                    <option value="Bridal Dressing">Bridal Dressing</option>
+                                    <option value="Hand & Foot Care">Hand & Foot Care</option>
+                                    <option value="Makeup & Beauty Services">Makeup & Beauty Services</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label for="serviceDuration"><i class="far fa-clock"></i> Duration in Minutes (කාලය)</label>
+                                <input type="number" id="serviceDuration" class="form-input" placeholder="e.g. 60" required min="15" step="15">
+                            </div>
+                            <div class="form-group">
+                                <label for="servicePrice"><i class="fas fa-money-bill-wave"></i> Price in Rs. (මිල)</label>
+                                <input type="number" id="servicePrice" class="form-input" placeholder="e.g. 4500" required min="500">
+                            </div>
+                            <div class="form-group">
+                                <label for="serviceTag"><i class="fas fa-badge"></i> Display Badge (Tag)</label>
+                                <select id="serviceTag" class="form-select">
+                                    <option value="Popular">Popular</option>
+                                    <option value="Radiance">Radiance</option>
+                                    <option value="Trending">Trending</option>
+                                    <option value="Royal Lounge">Royal Lounge</option>
+                                    <option value="Special Offer">Special Offer</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="serviceDescription"><i class="fas fa-align-left"></i> Description (විස්තරය)</label>
+                            <textarea id="serviceDescription" class="form-textarea" rows="3" placeholder="Describe the therapeutic benefits, styling process, and ingredients used..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="servicePhoto"><i class="fas fa-image"></i> Service Photo / Preset Image</label>
+                            <select id="servicePhoto" class="form-select">
+                                <option value="images/2148108899.jpg">Preset 1: Master Haircut & Blowout</option>
+                                <option value="images/2148660858.jpg">Preset 2: Botanical Gold Facial Therapy</option>
+                                <option value="images/20673.jpg">Preset 3: Balayage & Ombre Hair Color</option>
+                                <option value="images/2148398640.jpg">Preset 4: Royal Bridal Dressing</option>
+                                <option value="images/2151683994.jpg">Preset 5: Luxury Sanctuary Salon</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button type="submit" class="btn-save-form" id="btnSaveService">
+                                <i class="fas fa-save"></i> Save Service to Catalog
+                            </button>
+                            <button type="button" class="btn-edit-row" onclick="resetServiceForm()" id="btnCancelEditService" style="display: none;">
+                                Cancel Edit
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Active Services Table -->
+                <section class="crm-card">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-list text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Active Salon Services (දැනට පවතින සේවා)</h2>
+                        <span id="activeServicesCountBadge" style="font-size: 13px; color: #64748b;"></span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>Photo</th>
+                                    <th>Service Name</th>
+                                    <th>Category</th>
+                                    <th>Duration</th>
+                                    <th>Price</th>
+                                    <th>Badge</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="servicesManageTableBody">
+                                <!-- Populated dynamically by services-manager.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ==========================================
+                 TAB 3: USER MANAGEMENT (Admin/Client)
+                 ========================================== -->
+            <div id="tabUsers" class="tab-pane">
+                <!-- Add New User Form -->
+                <section class="crm-card" style="margin-bottom: 24px;">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-user-plus text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Register New System User (නව පරිශීලකයෙකු එක් කරන්න)</h2>
+                        <span style="font-size: 12.5px; color: #64748b;">Only Administrator can grant Admin or Client access</span>
+                    </div>
+
+                    <form id="userManageForm" onsubmit="handleSaveUser(event)">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label for="newFullName"><i class="far fa-user"></i> Full Name (සම්පූර්ණ නම)</label>
+                                <input type="text" id="newFullName" class="form-input" placeholder="e.g. Kasun Fernando" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newUsername"><i class="fas fa-at"></i> Username (පරිශීලක නාමය)</label>
+                                <input type="text" id="newUsername" class="form-input" placeholder="e.g. kasun_f" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newRole"><i class="fas fa-user-shield"></i> Assigned Role (කාර්යභාරය)</label>
+                                <select id="newRole" class="form-select" required>
+                                    <option value="client">VIP Client (පාරිභෝගිකයා)</option>
+                                    <option value="Admin">Administrator / Staff (පරිපාලක)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label for="newPhone"><i class="fas fa-phone"></i> Contact Mobile (දුරකථන අංකය)</label>
+                                <input type="tel" id="newPhone" class="form-input" placeholder="071XXXXXXX" required pattern="[0-9]{10}">
+                            </div>
+                            <div class="form-group">
+                                <label for="newEmail"><i class="far fa-envelope"></i> Email Address</label>
+                                <input type="email" id="newEmail" class="form-input" placeholder="kasun@example.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword"><i class="fas fa-lock"></i> Password (මුරපදය)</label>
+                                <input type="password" id="newPassword" class="form-input" placeholder="Enter secure password" required minlength="4">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-save-form">
+                            <i class="fas fa-user-check"></i> Register User into System
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Users Directory Table -->
+                <section class="crm-card">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-users text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Registered System Users & Clients (පරිශීලක තොරතුරු)</h2>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Full Name</th>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Contact Phone</th>
+                                    <th>Email</th>
+                                    <th>Joined Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersManageTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ==========================================
+                 TAB 4: SCHEDULE & WORKING HOURS (XAMPP Replica)
+                 ========================================== -->
+            <div id="tabSchedule" class="tab-pane">
+                <section class="crm-card">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-calendar-week text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Salon Operating Hours (කාලසටහන් කළමනාකරණය)</h2>
+                        <span style="font-size: 13px; color: #64748b;">Configures real-time slot generation in the booking engine</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>Day of Week</th>
+                                    <th>Opening Time</th>
+                                    <th>Closing Time</th>
+                                    <th>Status</th>
+                                    <th>Slot Capacity</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ==========================================
+                 TAB 5: REAL-TIME CLOUD CRM PORTAL
+                 ========================================== -->
+            <div id="tabCRM" class="tab-pane">
+                <!-- CRM Top Actions & Filters -->
+                <section class="crm-card" style="margin-bottom: 24px;">
+                    <div class="crm-card-header">
+                        <div>
+                            <h2><i class="fas fa-stream text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Real-Time Omnichannel CRM Stream</h2>
+                            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Live synchronization across Website slot bookings and WhatsApp Cloud inquiries</p>
+                        </div>
+                        
+                        <div class="filter-bar">
+                            <button class="filter-pill active" id="crmPillAll" onclick="setFilter('all', this)">All Stream</button>
+                            <button class="filter-pill" id="crmPillWeb" onclick="setFilter('website', this)"><i class="fas fa-globe"></i> Website</button>
+                            <button class="filter-pill" id="crmPillWA" onclick="setFilter('whatsapp', this)"><i class="fab fa-whatsapp"></i> WhatsApp Leads</button>
+                            <button class="filter-pill" id="crmPillConf" onclick="setFilter('confirmed', this)">Confirmed Only</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Channel</th>
+                                    <th>Customer & Phone</th>
+                                    <th>Service</th>
+                                    <th>Date & Time</th>
+                                    <th>Price</th>
+                                    <th>Status</th>
+                                    <th>Action Controls</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crmTableBody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">
+                                        <i class="fas fa-spinner fa-spin"></i> Connecting to live Cloud Firestore database...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Customer CRM Lifetime Value Directory -->
+                <section class="crm-card">
+                    <div class="crm-card-header">
+                        <h2><i class="fas fa-users-crown text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Client Lifetime CRM & Retention Profiles</h2>
+                        <span style="font-size: 13px; color: #64748b;">Consolidated client profiles with 1-Click direct WhatsApp outreach</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="crm-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Client Name</th>
+                                    <th>Contact Phone</th>
+                                    <th>Total Visits</th>
+                                    <th>Lifetime Spend</th>
+                                    <th>Last Treatment</th>
+                                    <th>Booking Channel</th>
+                                    <th>Direct Outreach</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 24px; color: #94a3b8;">
+                                        Compiling client relationship profiles...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
 
         </main>
     </div>
 
     <!-- Scripts: Zero hardcoding, loads Firebase from /api/config -->
     <script type="module" src="js/firebase-init.js"></script>
+    <script src="js/services-manager.js"></script>
     <script src="js/admin-crm.js"></script>
     <script src="js/chatbot.js"></script>
 

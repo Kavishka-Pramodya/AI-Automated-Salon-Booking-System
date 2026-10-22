@@ -20,40 +20,25 @@
     <div class="auth-ambient-1"></div>
     <div class="auth-ambient-2"></div>
 
-    <div class="auth-card" style="max-width: 520px;">
+    <div class="auth-card" style="max-width: 500px;">
         <div class="auth-header">
             <div class="auth-logo-badge">
                 <i class="fas fa-sparkles"></i>
             </div>
             <h1 class="auth-title">Create VIP Account</h1>
-            <p class="auth-subtitle">Register to unlock bespoke master styling, zero-wait time slots, and personalized beauty care</p>
+            <p class="auth-subtitle">Register for your Chanu Salon VIP membership to unlock master styling appointments and bespoke slot booking</p>
         </div>
 
         <div id="authAlert" class="auth-alert"></div>
 
         <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
             
-            <!-- Role Selection -->
-            <div class="auth-group">
-                <label><i class="fas fa-user-tag"></i> Desired Account Role</label>
-                <div class="role-selector-container">
-                    <label class="role-pill active" id="pillRegClient" onclick="selectRegRole('client')">
-                        <input type="radio" name="regRole" value="client" checked>
-                        <i class="fas fa-gem"></i> VIP Client
-                    </label>
-                    <label class="role-pill" id="pillRegAdmin" onclick="selectRegRole('Admin')">
-                        <input type="radio" name="regRole" value="Admin">
-                        <i class="fas fa-crown"></i> Admin / Staff
-                    </label>
-                </div>
-            </div>
-
             <!-- Full Name -->
             <div class="auth-group">
                 <label for="regFullName"><i class="far fa-user"></i> Full Name</label>
                 <div class="auth-input-wrapper">
                     <i class="far fa-user input-icon"></i>
-                    <input type="text" id="regFullName" placeholder="e.g. Kasun Perera" required>
+                    <input type="text" id="regFullName" placeholder="e.g. Anuki Perera" required>
                 </div>
             </div>
 
@@ -63,15 +48,24 @@
                     <label for="regPhone"><i class="fas fa-phone"></i> Phone / WhatsApp</label>
                     <div class="auth-input-wrapper">
                         <i class="fas fa-phone input-icon"></i>
-                        <input type="tel" id="regPhone" placeholder="07X XXX XXXX" required>
+                        <input type="tel" id="regPhone" placeholder="071XXXXXXX" required pattern="[0-9]{10}">
                     </div>
                 </div>
                 <div class="auth-group">
                     <label for="regUsername"><i class="fas fa-at"></i> Username</label>
                     <div class="auth-input-wrapper">
                         <i class="fas fa-at input-icon"></i>
-                        <input type="text" id="regUsername" placeholder="e.g. kasun24" required>
+                        <input type="text" id="regUsername" placeholder="e.g. anuki24" required>
                     </div>
+                </div>
+            </div>
+
+            <!-- Email -->
+            <div class="auth-group">
+                <label for="regEmail"><i class="far fa-envelope"></i> Email Address</label>
+                <div class="auth-input-wrapper">
+                    <i class="far fa-envelope input-icon"></i>
+                    <input type="email" id="regEmail" placeholder="anuki@example.com" required>
                 </div>
             </div>
 
@@ -84,13 +78,9 @@
                 </div>
             </div>
 
-            <!-- Admin Passcode Field (Conditional for Admin) -->
-            <div class="auth-group" id="adminPasscodeGroup" style="display: none;">
-                <label for="adminPasscode"><i class="fas fa-key"></i> Master Security Passcode <span style="color: #f43f5e;">*</span></label>
-                <div class="auth-input-wrapper">
-                    <i class="fas fa-key input-icon"></i>
-                    <input type="password" id="adminPasscode" placeholder="Enter salon master passcode (chanu2025)">
-                </div>
+            <!-- Notice -->
+            <div style="font-size: 11.5px; color: #94a3b8; margin: -6px 0 16px 2px; line-height: 1.4;">
+                <i class="fas fa-shield-alt" style="color: #f43f5e; margin-right: 4px;"></i> Public registrations are for VIP Clients only. Admin accounts are provisioned by salon management.
             </div>
 
             <!-- Submit Button -->
@@ -109,29 +99,8 @@
     <!-- Universal Autonomous AI Concierge Widget -->
     <script src="js/chatbot.js"></script>
 
-    <!-- Registration Logic -->
+    <!-- Client-Only Registration Logic -->
     <script>
-        let selectedRegRole = 'client';
-
-        function selectRegRole(role) {
-            selectedRegRole = role;
-            document.getElementById('pillRegClient').classList.toggle('active', role === 'client');
-            document.getElementById('pillRegAdmin').classList.toggle('active', role === 'Admin');
-
-            const adminPassGroup = document.getElementById('adminPasscodeGroup');
-            const submitBtn = document.getElementById('btnRegSubmit');
-
-            if (role === 'Admin') {
-                adminPassGroup.style.display = 'flex';
-                document.getElementById('adminPasscode').setAttribute('required', 'true');
-                submitBtn.innerHTML = '<span>Register as Salon Admin</span> <i class="fas fa-shield-alt"></i>';
-            } else {
-                adminPassGroup.style.display = 'none';
-                document.getElementById('adminPasscode').removeAttribute('required');
-                submitBtn.innerHTML = '<span>Complete VIP Registration</span> <i class="fas fa-arrow-right"></i>';
-            }
-        }
-
         function showAlert(msg, isSuccess = false) {
             const alertBox = document.getElementById('authAlert');
             alertBox.textContent = msg;
@@ -144,20 +113,12 @@
             const fullName = document.getElementById('regFullName').value.trim();
             const phone = document.getElementById('regPhone').value.trim();
             const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
             const password = document.getElementById('regPassword').value.trim();
 
             if (!fullName || !phone || !username || !password) {
                 showAlert('Please fill in all required fields.');
                 return;
-            }
-
-            // Admin verification check
-            if (selectedRegRole === 'Admin') {
-                const adminCode = document.getElementById('adminPasscode').value.trim();
-                if (adminCode !== 'chanu2025') {
-                    showAlert('Invalid Master Security Passcode for Admin role. Verification failed.');
-                    return;
-                }
             }
 
             // Retrieve existing users
@@ -168,13 +129,15 @@
                 return;
             }
 
-            // Save new user
+            // Register new VIP Client
             const newUser = {
+                id: Date.now(),
                 fullName: fullName,
                 phone: phone,
+                email: email,
                 username: username,
                 password: password,
-                role: selectedRegRole,
+                role: 'client',
                 registeredAt: new Date().toISOString()
             };
 
@@ -185,27 +148,16 @@
             localStorage.setItem('chanu_user', JSON.stringify({
                 fullName: fullName,
                 phone: phone,
+                email: email,
                 username: username,
-                role: selectedRegRole
+                role: 'client'
             }));
 
-            if (selectedRegRole === 'Admin') {
-                sessionStorage.setItem('admin_auth', 'true');
-                sessionStorage.setItem('chanu_admin_auth', 'true');
-                showAlert('Admin account created successfully! Redirecting to CRM Portal...', true);
-                setTimeout(() => {
-                    window.location.href = 'admin.html';
-                }, 900);
-            } else {
-                showAlert('VIP Account created successfully! Unlocking services...', true);
-                setTimeout(() => {
-                    window.location.href = 'index.html#services';
-                }, 900);
-            }
+            showAlert('VIP Account created successfully! Unlocking services...', true);
+            setTimeout(() => {
+                window.location.href = 'index.html#services';
+            }, 900);
         }
     </script>
-
-    <!-- Universal Autonomous AI Concierge Widget -->
-    <script src="js/chatbot.js"></script>
 </body>
 </html>
