@@ -11,6 +11,7 @@
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/chatbot.css">
 </head>
 <body>
 
@@ -31,9 +32,10 @@
             <a href="#contact">Contact</a>
         </nav>
 
-        <div class="auth-buttons">
-            <a href="admin.html" class="btn-crm-link"><i class="fas fa-lock"></i> Admin CRM</a>
-            <a href="#booking-section" class="btn-book-nav">Book Appointment</a>
+        <div class="auth-buttons" id="navAuthContainer">
+            <a href="admin.html" class="btn-crm-link"><i class="fas fa-crown"></i> Admin CRM</a>
+            <a href="login.html" class="btn-login"><i class="far fa-user"></i> Login</a>
+            <a href="register.html" class="btn-signup"><i class="fas fa-sparkles"></i> Sign Up</a>
         </div>
     </header>
 
@@ -191,6 +193,19 @@
                 <p class="section-subtitle">Pick your date, choose your treatment, and select an open 30-minute block.</p>
             </div>
 
+                        <!-- Sanctuary Locked Card for unauthenticated users -->
+            <div id="sanctuaryLockBox" class="sanctuary-lock-card" style="display: none;">
+                <div class="sanctuary-lock-icon"><i class="fas fa-lock"></i></div>
+                <h3 class="sanctuary-lock-title">Exclusive Member Sanctuary</h3>
+                <p class="sanctuary-lock-desc">
+                    To reserve master stylist appointments and access bespoke slots, please sign in or register for your complimentary VIP client pass.
+                </p>
+                <div class="sanctuary-lock-actions">
+                    <a href="login.html" class="btn-login" style="padding: 10px 22px; font-size: 14px;"><i class="far fa-user"></i> Sign In to Book</a>
+                    <a href="register.html" class="btn-signup" style="padding: 10px 22px; font-size: 14px;"><i class="fas fa-sparkles"></i> Register VIP Pass</a>
+                </div>
+            </div>
+
             <div class="booking-grid">
                 <!-- Left: Booking Form -->
                 <div class="booking-form-box">
@@ -343,53 +358,77 @@
         </div>
     </div>
 
-    <!-- 8. Floating AI Stylist Widget -->
-    <div class="ai-stylist-widget" id="aiStylistWidget" onclick="toggleAIChat()">
-        <div class="ai-widget-icon">
-            <i class="fas fa-wand-magic-sparkles"></i>
-        </div>
-        <div class="ai-widget-text">
-            <span class="ai-badge-title">AI Stylist</span>
-            <span class="ai-badge-sub">Ask pricing & advice</span>
-        </div>
-    </div>
-
-    <!-- AI Chat Modal Popup -->
-    <div class="ai-chat-modal" id="aiChatModal">
-        <div class="ai-modal-header">
-            <div class="ai-header-left">
-                <div class="ai-avatar"><i class="fas fa-robot"></i></div>
-                <div>
-                    <h4>Anya | AI Stylist</h4>
-                    <span class="ai-online-status">Online • Instant Answers</span>
-                </div>
-            </div>
-            <button class="ai-close-btn" onclick="toggleAIChat()">&times;</button>
-        </div>
-        <div class="ai-modal-body" id="aiChatBody">
-            <div class="ai-msg bot">
-                Hello gorgeous! 👋 I am Anya, your Chanu Salon AI beauty advisor. Ask me anything about our services, bridal packages, or booking!
-            </div>
-            <div class="ai-quick-prompts">
-                <button onclick="askPrompt('What are your hair cutting rates?')">✂️ Haircut rates?</button>
-                <button onclick="askPrompt('How do I book a time slot?')">📅 How to book a slot?</button>
-                <button onclick="askPrompt('What are the benefits of your Gold facial?')">✨ Gold facial benefits?</button>
-            </div>
-        </div>
-        <div class="ai-modal-footer">
-            <input type="text" id="aiInput" placeholder="Ask about styling, pricing, slots..." onkeypress="handleAIKeyPress(event)">
-            <button onclick="sendAIMessage()"><i class="fas fa-paper-plane"></i></button>
-        </div>
-    </div>
-
     <!-- Scripts: Zero hardcoding, loads Firebase from /api/config -->
     <script type="module" src="js/firebase-init.js"></script>
     <script src="js/booking.js"></script>
     <script src="js/chatbot.js"></script>
 
+    
     <script>
-        // Set minimum date to today
+        function checkAuthState() {
+            const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
+            const nav = document.getElementById('navAuthContainer');
+            const lockBox = document.getElementById('sanctuaryLockBox');
+            const bookingGrid = document.querySelector('.booking-grid');
+
+            if (user && user.role === 'client') {
+                if (nav) {
+                    nav.innerHTML = `
+                        <a href="admin.html" class="btn-crm-link"><i class="fas fa-crown"></i> Admin CRM</a>
+                        <div class="user-profile-badge">
+                            <div class="user-avatar-mini">${user.fullName ? user.fullName[0].toUpperCase() : 'C'}</div>
+                            <div class="user-info-mini">
+                                <span class="user-name-mini">${escapeHtml(user.fullName || user.username)}</span>
+                                <span class="user-role-mini">VIP Client</span>
+                            </div>
+                        </div>
+                        <button class="btn-logout" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    `;
+                }
+                if (lockBox) lockBox.style.display = 'none';
+                if (bookingGrid) bookingGrid.style.display = 'grid';
+                const nameInput = document.getElementById('custName');
+                const phoneInput = document.getElementById('custPhone');
+                if (nameInput && user.fullName) nameInput.value = user.fullName;
+                if (phoneInput && user.phone) phoneInput.value = user.phone;
+            } else if (user && user.role === 'Admin') {
+                if (nav) {
+                    nav.innerHTML = `
+                        <a href="admin.html" class="btn-crm-link" style="background: #0f172a; color: #ffffff;"><i class="fas fa-crown" style="color: #f472b6;"></i> Open Admin CRM</a>
+                        <button class="btn-logout" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    `;
+                }
+                if (lockBox) lockBox.style.display = 'none';
+                if (bookingGrid) bookingGrid.style.display = 'grid';
+            } else {
+                if (nav) {
+                    nav.innerHTML = `
+                        <a href="admin.html" class="btn-crm-link"><i class="fas fa-crown"></i> Admin CRM</a>
+                        <a href="login.html" class="btn-login"><i class="far fa-user"></i> Login</a>
+                        <a href="register.html" class="btn-signup"><i class="fas fa-sparkles"></i> Sign Up</a>
+                    `;
+                }
+                if (lockBox) lockBox.style.display = 'block';
+                if (bookingGrid) bookingGrid.style.display = 'none';
+            }
+        }
+
+        function logoutUser() {
+            localStorage.removeItem('chanu_user');
+            sessionStorage.removeItem('chanu_admin_auth');
+            sessionStorage.removeItem('admin_auth');
+            window.location.reload();
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        // Set minimum date to today and check auth
         document.addEventListener('DOMContentLoaded', () => {
+            checkAuthState();
             const dateInput = document.getElementById('bookingDate');
             if (dateInput) {
                 const today = new Date().toISOString().split('T')[0];

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP Member Registration | Chanu Salon Sanctuary</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/chatbot.css">
+</head>
+<body>
+
+    <!-- Ambient Lighting Orbs -->
+    <div class="auth-ambient-1"></div>
+    <div class="auth-ambient-2"></div>
+
+    <div class="auth-card" style="max-width: 520px;">
+        <div class="auth-header">
+            <div class="auth-logo-badge">
+                <i class="fas fa-sparkles"></i>
+            </div>
+            <h1 class="auth-title">Create VIP Account</h1>
+            <p class="auth-subtitle">Register to unlock bespoke master styling, zero-wait time slots, and personalized beauty care</p>
+        </div>
+
+        <div id="authAlert" class="auth-alert"></div>
+
+        <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+            
+            <!-- Role Selection -->
+            <div class="auth-group">
+                <label><i class="fas fa-user-tag"></i> Desired Account Role</label>
+                <div class="role-selector-container">
+                    <label class="role-pill active" id="pillRegClient" onclick="selectRegRole('client')">
+                        <input type="radio" name="regRole" value="client" checked>
+                        <i class="fas fa-gem"></i> VIP Client
+                    </label>
+                    <label class="role-pill" id="pillRegAdmin" onclick="selectRegRole('Admin')">
+                        <input type="radio" name="regRole" value="Admin">
+                        <i class="fas fa-crown"></i> Admin / Staff
+                    </label>
+                </div>
+            </div>
+
+            <!-- Full Name -->
+            <div class="auth-group">
+                <label for="regFullName"><i class="far fa-user"></i> Full Name</label>
+                <div class="auth-input-wrapper">
+                    <i class="far fa-user input-icon"></i>
+                    <input type="text" id="regFullName" placeholder="e.g. Kasun Perera" required>
+                </div>
+            </div>
+
+            <!-- Phone & Username in 2 columns -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div class="auth-group">
+                    <label for="regPhone"><i class="fas fa-phone"></i> Phone / WhatsApp</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-phone input-icon"></i>
+                        <input type="tel" id="regPhone" placeholder="07X XXX XXXX" required>
+                    </div>
+                </div>
+                <div class="auth-group">
+                    <label for="regUsername"><i class="fas fa-at"></i> Username</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-at input-icon"></i>
+                        <input type="text" id="regUsername" placeholder="e.g. kasun24" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Password -->
+            <div class="auth-group">
+                <label for="regPassword"><i class="fas fa-lock"></i> Password</label>
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="regPassword" placeholder="Create a secure password" required minlength="4">
+                </div>
+            </div>
+
+            <!-- Admin Passcode Field (Conditional for Admin) -->
+            <div class="auth-group" id="adminPasscodeGroup" style="display: none;">
+                <label for="adminPasscode"><i class="fas fa-key"></i> Master Security Passcode <span style="color: #f43f5e;">*</span></label>
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-key input-icon"></i>
+                    <input type="password" id="adminPasscode" placeholder="Enter salon master passcode (chanu2025)">
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-auth-submit" id="btnRegSubmit">
+                <span>Complete VIP Registration</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="auth-footer-links">
+            <p>Already have an account? <a href="login.html">Sign In here</a></p>
+            <a href="index.html" class="back-home-link"><i class="fas fa-chevron-left"></i> Return to Sanctuary Home</a>
+        </div>
+    </div>
+
+    <!-- Universal Autonomous AI Concierge Widget -->
+    <script src="js/chatbot.js"></script>
+
+    <!-- Registration Logic -->
+    <script>
+        let selectedRegRole = 'client';
+
+        function selectRegRole(role) {
+            selectedRegRole = role;
+            document.getElementById('pillRegClient').classList.toggle('active', role === 'client');
+            document.getElementById('pillRegAdmin').classList.toggle('active', role === 'Admin');
+
+            const adminPassGroup = document.getElementById('adminPasscodeGroup');
+            const submitBtn = document.getElementById('btnRegSubmit');
+
+            if (role === 'Admin') {
+                adminPassGroup.style.display = 'flex';
+                document.getElementById('adminPasscode').setAttribute('required', 'true');
+                submitBtn.innerHTML = '<span>Register as Salon Admin</span> <i class="fas fa-shield-alt"></i>';
+            } else {
+                adminPassGroup.style.display = 'none';
+                document.getElementById('adminPasscode').removeAttribute('required');
+                submitBtn.innerHTML = '<span>Complete VIP Registration</span> <i class="fas fa-arrow-right"></i>';
+            }
+        }
+
+        function showAlert(msg, isSuccess = false) {
+            const alertBox = document.getElementById('authAlert');
+            alertBox.textContent = msg;
+            alertBox.className = `auth-alert ${isSuccess ? 'success' : 'error'}`;
+            alertBox.style.display = 'flex';
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('regFullName').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+
+            if (!fullName || !phone || !username || !password) {
+                showAlert('Please fill in all required fields.');
+                return;
+            }
+
+            // Admin verification check
+            if (selectedRegRole === 'Admin') {
+                const adminCode = document.getElementById('adminPasscode').value.trim();
+                if (adminCode !== 'chanu2025') {
+                    showAlert('Invalid Master Security Passcode for Admin role. Verification failed.');
+                    return;
+                }
+            }
+
+            // Retrieve existing users
+            const users = JSON.parse(localStorage.getItem('chanu_registered_users') || '[]');
+            const exists = users.some(u => u.username.toLowerCase() === username.toLowerCase());
+            if (exists) {
+                showAlert('Username is already taken. Please choose another username.');
+                return;
+            }
+
+            // Save new user
+            const newUser = {
+                fullName: fullName,
+                phone: phone,
+                username: username,
+                password: password,
+                role: selectedRegRole,
+                registeredAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('chanu_registered_users', JSON.stringify(users));
+
+            // Set active session
+            localStorage.setItem('chanu_user', JSON.stringify({
+                fullName: fullName,
+                phone: phone,
+                username: username,
+                role: selectedRegRole
+            }));
+
+            if (selectedRegRole === 'Admin') {
+                sessionStorage.setItem('admin_auth', 'true');
+                sessionStorage.setItem('chanu_admin_auth', 'true');
+                showAlert('Admin account created successfully! Redirecting to CRM Portal...', true);
+                setTimeout(() => {
+                    window.location.href = 'admin.html';
+                }, 900);
+            } else {
+                showAlert('VIP Account created successfully! Unlocking services...', true);
+                setTimeout(() => {
+                    window.location.href = 'index.html#services';
+                }, 900);
+            }
+        }
+    </script>
+
+    <!-- Universal Autonomous AI Concierge Widget -->
+    <script src="js/chatbot.js"></script>
+</body>
+</html>

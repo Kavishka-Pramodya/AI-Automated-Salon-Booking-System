@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | Chanu Salon Sanctuary</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/chatbot.css">
+</head>
+<body>
+
+    <!-- Ambient Lighting Orbs -->
+    <div class="auth-ambient-1"></div>
+    <div class="auth-ambient-2"></div>
+
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo-badge">
+                <i class="fas fa-crown"></i>
+            </div>
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="auth-subtitle">Sign in to your Chanu Salon account to view exclusive services and manage appointments</p>
+        </div>
+
+        <div id="authAlert" class="auth-alert"></div>
+
+        <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
+            
+            <!-- Role Toggle -->
+            <div class="auth-group">
+                <label><i class="fas fa-shield-alt"></i> Account Type</label>
+                <div class="role-selector-container">
+                    <label class="role-pill active" id="pillClient" onclick="selectRole('client')">
+                        <input type="radio" name="authRole" value="client" checked>
+                        <i class="fas fa-user-circle"></i> VIP Client
+                    </label>
+                    <label class="role-pill" id="pillAdmin" onclick="selectRole('Admin')">
+                        <input type="radio" name="authRole" value="Admin">
+                        <i class="fas fa-user-shield"></i> Admin / Staff
+                    </label>
+                </div>
+            </div>
+
+            <!-- Username or Email -->
+            <div class="auth-group">
+                <label for="loginUsername"><i class="far fa-user"></i> Username or Email</label>
+                <div class="auth-input-wrapper">
+                    <i class="far fa-user input-icon"></i>
+                    <input type="text" id="loginUsername" placeholder="Enter your username or email" required autocomplete="username">
+                </div>
+            </div>
+
+            <!-- Password -->
+            <div class="auth-group">
+                <label for="loginPassword"><i class="fas fa-lock"></i> Password</label>
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn-auth-submit" id="btnSubmit">
+                <span>Sign In to Sanctuary</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="auth-footer-links">
+            <p>New to Chanu Salon? <a href="register.html">Create a VIP Account</a></p>
+            <a href="index.html" class="back-home-link"><i class="fas fa-chevron-left"></i> Return to Sanctuary Home</a>
+        </div>
+    </div>
+
+    <!-- Universal Autonomous AI Concierge Widget -->
+    <script src="js/chatbot.js"></script>
+
+    <!-- Role-Based Login Logic -->
+    <script>
+        let selectedRole = 'client';
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.getElementById('pillClient').classList.toggle('active', role === 'client');
+            document.getElementById('pillAdmin').classList.toggle('active', role === 'Admin');
+            
+            const submitBtn = document.getElementById('btnSubmit');
+            if (role === 'Admin') {
+                submitBtn.innerHTML = '<span>Sign In as Admin</span> <i class="fas fa-shield-alt"></i>';
+            } else {
+                submitBtn.innerHTML = '<span>Sign In to Sanctuary</span> <i class="fas fa-arrow-right"></i>';
+            }
+        }
+
+        function showAlert(msg, isSuccess = false) {
+            const alertBox = document.getElementById('authAlert');
+            alertBox.textContent = msg;
+            alertBox.className = `auth-alert ${isSuccess ? 'success' : 'error'}`;
+            alertBox.style.display = 'flex';
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+
+            if (!username || !password) {
+                showAlert('Please fill in all credentials.');
+                return;
+            }
+
+            // 1. Admin Login Route
+            if (selectedRole === 'Admin') {
+                if (password === 'chanu2025' || (username.toLowerCase() === 'admin' && password === 'chanu2025')) {
+                    showAlert('Admin authenticated! Redirecting to CRM Portal...', true);
+                    const adminSession = {
+                        username: username,
+                        role: 'Admin',
+                        token: 'chanu_admin_verified'
+                    };
+                    localStorage.setItem('chanu_user', JSON.stringify(adminSession));
+                    sessionStorage.setItem('admin_auth', 'true');
+                    sessionStorage.setItem('chanu_admin_auth', 'true');
+                    setTimeout(() => {
+                        window.location.href = 'admin.html';
+                    }, 800);
+                    return;
+                } else {
+                    showAlert('Invalid Admin credentials or Master Passcode. Default passcode is: chanu2025');
+                    return;
+                }
+            }
+
+            // 2. Client Login Route
+            const users = JSON.parse(localStorage.getItem('chanu_registered_users') || '[]');
+            const existing = users.find(u => 
+                (u.username.toLowerCase() === username.toLowerCase() || (u.email && u.email.toLowerCase() === username.toLowerCase()))
+            );
+
+            if (existing && existing.password !== password) {
+                showAlert('Incorrect password. Please verify your credentials.');
+                return;
+            }
+
+            // Successful Client Login
+            const clientSession = {
+                username: existing ? existing.username : username,
+                fullName: existing ? existing.fullName : username,
+                phone: existing ? existing.phone : '',
+                role: 'client'
+            };
+
+            localStorage.setItem('chanu_user', JSON.stringify(clientSession));
+            showAlert('Welcome to Chanu Salon Sanctuary! Unlocking services...', true);
+            setTimeout(() => {
+                window.location.href = 'index.html#services';
+            }, 800);
+        }
+    </script>
+</body>
+</html>

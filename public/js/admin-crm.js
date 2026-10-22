@@ -7,11 +7,12 @@ let activeFilter = 'all';
 
 // 1. Admin Authentication Check
 window.checkAdminAuth = function() {
-    const isAuth = sessionStorage.getItem('chanu_admin_auth');
+    const isAuth = sessionStorage.getItem('chanu_admin_auth') || sessionStorage.getItem('admin_auth');
+    const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
     const authOverlay = document.getElementById('adminAuthOverlay');
     const dashboard = document.getElementById('crmDashboard');
 
-    if (isAuth === 'true') {
+    if (isAuth === 'true' || (user && user.role === 'Admin')) {
         if (authOverlay) authOverlay.style.display = 'none';
         if (dashboard) dashboard.style.display = 'block';
         initRealtimeCRM();
@@ -24,9 +25,15 @@ window.checkAdminAuth = function() {
 window.loginAdmin = function(e) {
     e.preventDefault();
     const pin = document.getElementById('adminPin').value.trim();
-    // Default master passcode or env passcode
     if (pin === 'chanu2025' || pin === 'admin123') {
         sessionStorage.setItem('chanu_admin_auth', 'true');
+        sessionStorage.setItem('admin_auth', 'true');
+        const adminSession = {
+            username: 'Administrator',
+            role: 'Admin',
+            token: 'chanu_admin_verified'
+        };
+        localStorage.setItem('chanu_user', JSON.stringify(adminSession));
         window.checkAdminAuth();
     } else {
         alert("Invalid Admin Passcode! (Default: chanu2025)");
@@ -35,8 +42,13 @@ window.loginAdmin = function(e) {
 
 window.logoutAdmin = function() {
     sessionStorage.removeItem('chanu_admin_auth');
+    sessionStorage.removeItem('admin_auth');
+    const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
+    if (user && user.role === 'Admin') {
+        localStorage.removeItem('chanu_user');
+    }
     if (unsubscribeListener) unsubscribeListener();
-    window.location.reload();
+    window.location.href = 'login.html';
 };
 
 // 2. Real-time Firestore Sync
@@ -52,7 +64,7 @@ function initRealtimeCRM() {
 }
 
 function attachFirestoreListener() {
-    const { db, collection, onSnapshot, query, orderBy } = window.salonDB;
+    const { db, collection, onSnapshot, query } = window.salonDB;
     const tableBody = document.getElementById('crmTableBody');
 
     try {
@@ -77,6 +89,7 @@ function attachFirestoreListener() {
 
             updateCRMStats();
             renderCRMTable();
+            renderClientsTable();
         }, (err) => {
             console.error("Firestore listener error:", err);
             if (tableBody) {
@@ -146,7 +159,7 @@ function renderCRMTable() {
             <tr>
                 <td colspan="8" style="text-align: center; padding: 40px; color: #94a3b8;">
                     <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
-                    No appointments or leads found.
+                    No appointments or leads found in this stream.
                 </td>
             </tr>
         `;
@@ -206,7 +219,125 @@ function renderCRMTable() {
     tableBody.innerHTML = rowsHtml;
 }
 
-// 5. Update Status in Firebase Firestore
+// 5. Render Consolidated Client CRM Directory
+function renderClientsTable() {
+    const clientsBody = document.getElementById('clientsTableBody');
+    if (!clientsBody) return;
+
+    const clientsMap = {};
+
+    allAppointments.forEach(item => {
+        const phone = (item.customerPhone || "").trim();
+        if (!phone) return;
+
+        if (!clientsMap[phone]) {
+            clientsMap[phone] = {
+                name: item.customerName || 'VIP Client',
+                phone: phone,
+                visits: 0,
+                totalSpend: 0,
+                lastService: item.service || 'Hair Treatment',
+                lastDate: item.bookingDate || '',
+                channels: new Set()
+            };
+        }
+
+        clientsMap[phone].visits++;
+        if (item.status === 'Confirmed' || item.status === 'Completed') {
+            clientsMap[phone].totalSpend += Number(item.price || 0);
+        }
+        if (item.channel) {
+            clientsMap[phone].channels.add(item.channel);
+        }
+        if (item.bookingDate && item.bookingDate >= clientsMap[phone].lastDate) {
+            clientsMap[phone].lastDate = item.bookingDate;
+            clientsMap[phone].lastService = item.service || clientsMap[phone].lastService;
+        }
+    });
+
+    const clientList = Object.values(clientsMap);
+    clientList.sort((a, b) => b.totalSpend - a.totalSpend);
+
+    if (clientList.length === 0) {
+        clientsBody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">
+                    No client profiles recorded yet.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    clientList.forEach((c, idx) => {
+        let cleanPhone = c.phone.replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '94' + cleanPhone.substring(1);
+        const waMsg = encodeURIComponent(`Hello ${c.name}! This is Chanu Salon reaching out to check on your recent salon experience and offer you our latest VIP booking slots.`);
+        const waLink = `https://wa.me/${cleanPhone}?text=${waMsg}`;
+        const channelsArr = Array.from(c.channels);
+
+        html += `
+            <tr>
+                <td><strong>#${idx + 1}</strong></td>
+                <td><strong>${escapeHtml(c.name)}</strong></td>
+                <td><code><i class="fas fa-phone"></i> ${escapeHtml(c.phone)}</code></td>
+                <td><span class="slot-pill">${c.visits} Appointments</span></td>
+                <td><strong style="color: #059669;">Rs. ${c.totalSpend.toLocaleString()}</strong></td>
+                <td>${escapeHtml(c.lastService)}</td>
+                <td>
+                    ${channelsArr.map(ch => ch === 'whatsapp' ? '<span class="badge-channel wa">WhatsApp</span>' : '<span class="badge-channel web">Web</span>').join(' ')}
+                </td>
+                <td>
+                    <a href="${waLink}" target="_blank" class="filter-pill" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #25d366; color: white; border: none; font-size: 12px; padding: 6px 14px;">
+                        <i class="fab fa-whatsapp"></i> Message Client
+                    </a>
+                </td>
+            </tr>
+        `;
+    });
+
+    clientsBody.innerHTML = html;
+}
+
+// 6. Section & Tab Switchers
+window.switchCRMSection = function(section, btn) {
+    const streamSec = document.getElementById('sectionStream');
+    const clientsSec = document.getElementById('sectionClients');
+    const btnStream = document.getElementById('btnViewStream');
+    const btnClients = document.getElementById('btnViewClients');
+
+    if (btnStream) btnStream.classList.toggle('active', section === 'stream');
+    if (btnClients) btnClients.classList.toggle('active', section === 'clients');
+
+    if (section === 'stream') {
+        if (streamSec) streamSec.style.display = 'block';
+        if (clientsSec) clientsSec.style.display = 'none';
+    } else {
+        if (streamSec) streamSec.style.display = 'none';
+        if (clientsSec) clientsSec.style.display = 'block';
+    }
+};
+
+window.switchAdminTab = function(tabName, linkEl) {
+    document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+    if (linkEl) linkEl.classList.add('active');
+
+    if (tabName === 'overview') {
+        window.switchCRMSection('stream');
+        window.setFilter('all', document.getElementById('pillAll'));
+    } else if (tabName === 'bookings') {
+        window.switchCRMSection('stream');
+        window.setFilter('website', document.getElementById('pillWeb'));
+    } else if (tabName === 'whatsapp') {
+        window.switchCRMSection('stream');
+        window.setFilter('whatsapp', document.getElementById('pillWA'));
+    } else if (tabName === 'clients') {
+        window.switchCRMSection('clients');
+    }
+};
+
+// 7. Update Status in Firebase Firestore
 window.updateStatus = async function(docId, newStatus) {
     if (!window.salonDB || !window.salonDB.db) return;
     try {
@@ -222,7 +353,7 @@ window.updateStatus = async function(docId, newStatus) {
 
 window.setFilter = function(filterName, btn) {
     activeFilter = filterName;
-    document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.filter-bar .filter-pill').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     renderCRMTable();
 };

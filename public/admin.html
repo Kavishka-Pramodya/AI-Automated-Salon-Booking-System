@@ -11,6 +11,7 @@
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/chatbot.css">
 </head>
 <body>
 
@@ -39,10 +40,11 @@
             </div>
 
             <nav class="sidebar-menu">
-                <a href="#overview" class="active"><i class="fas fa-tachometer-alt"></i> <span>Live Dashboard</span></a>
-                <a href="#bookings"><i class="fas fa-calendar-check"></i> <span>Appointments</span></a>
-                <a href="#whatsapp"><i class="fab fa-whatsapp"></i> <span>WhatsApp Leads</span></a>
-                <a href="index.html" target="_blank"><i class="fas fa-external-link-alt"></i> <span>Open Web Store</span></a>
+                <a href="#overview" id="sideTabOverview" class="active" onclick="switchAdminTab('overview', this)"><i class="fas fa-tachometer-alt"></i> <span>Live Dashboard</span></a>
+                <a href="#bookings" id="sideTabBookings" onclick="switchAdminTab('bookings', this)"><i class="fas fa-calendar-check"></i> <span>Appointments CRM</span></a>
+                <a href="#whatsapp" id="sideTabWhatsapp" onclick="switchAdminTab('whatsapp', this)"><i class="fab fa-whatsapp"></i> <span>WhatsApp Leads</span></a>
+                <a href="#clients" id="sideTabClients" onclick="switchAdminTab('clients', this)"><i class="fas fa-users"></i> <span>Client Directory</span></a>
+                <a href="index.html"><i class="fas fa-external-link-alt"></i> <span>Open Sanctuary Home</span></a>
             </nav>
 
             <div class="sidebar-footer">
@@ -58,7 +60,7 @@
             <!-- Top Bar -->
             <header class="top-bar">
                 <div>
-                    <h1>Omnichannel Salon CRM</h1>
+                    <h1>Omnichannel Salon CRM & Admin Portal</h1>
                     <div class="live-indicator">
                         <span class="live-dot"></span>
                         <span>LIVE FIRESTORE REAL-TIME SYNC</span>
@@ -66,20 +68,23 @@
                 </div>
 
                 <div class="top-actions">
-                    <a href="index.html" class="btn-view-site" target="_blank">
-                        <i class="fas fa-store"></i> View Client Booking Page
+                    <button class="filter-pill active" id="btnViewStream" onclick="switchCRMSection('stream', this)"><i class="fas fa-stream"></i> Bookings Stream</button>
+                    <button class="filter-pill" id="btnViewClients" onclick="switchCRMSection('clients', this)"><i class="fas fa-users"></i> Client CRM</button>
+                    <a href="index.html" class="btn-view-site">
+                        <i class="fas fa-store"></i> View Client Sanctuary
                     </a>
+                    <button class="filter-pill" style="color: #ef4444; border-color: #fca5a5;" onclick="logoutAdmin()"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 </div>
             </header>
 
             <!-- 4 Glow Metric Stat Cards -->
             <section class="stats-grid">
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="switchAdminTab('overview')">
                     <div class="stat-label"><i class="fas fa-calendar-day"></i> Today's Appointments</div>
                     <div class="stat-val" id="statToday">0</div>
                 </div>
 
-                <div class="stat-card blue">
+                <div class="stat-card blue" style="cursor: pointer;" onclick="switchAdminTab('bookings')">
                     <div class="stat-label"><i class="fas fa-calendar-alt"></i> Upcoming Bookings</div>
                     <div class="stat-val" id="statUpcoming">0</div>
                 </div>
@@ -89,22 +94,22 @@
                     <div class="stat-val" id="statRevenue">Rs. 0</div>
                 </div>
 
-                <div class="stat-card green">
+                <div class="stat-card green" style="cursor: pointer;" onclick="switchAdminTab('clients')">
                     <div class="stat-label"><i class="fas fa-users"></i> Unique Client Base</div>
                     <div class="stat-val" id="statClients">0 Clients</div>
                 </div>
             </section>
 
-            <!-- Appointments & Leads Table Card -->
-            <section class="crm-card">
+            <!-- 1. Appointments & Leads Table Section -->
+            <section class="crm-card" id="sectionStream">
                 <div class="crm-card-header">
                     <h2><i class="fas fa-stream text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Real-Time Booking & Lead Stream</h2>
                     
                     <div class="filter-bar">
-                        <button class="filter-pill active" onclick="setFilter('all', this)">All Stream</button>
-                        <button class="filter-pill" onclick="setFilter('website', this)"><i class="fas fa-globe"></i> Website</button>
-                        <button class="filter-pill" onclick="setFilter('whatsapp', this)"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                        <button class="filter-pill" onclick="setFilter('confirmed', this)">Confirmed Only</button>
+                        <button class="filter-pill active" id="pillAll" onclick="setFilter('all', this)">All Stream</button>
+                        <button class="filter-pill" id="pillWeb" onclick="setFilter('website', this)"><i class="fas fa-globe"></i> Website</button>
+                        <button class="filter-pill" id="pillWA" onclick="setFilter('whatsapp', this)"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                        <button class="filter-pill" id="pillConf" onclick="setFilter('confirmed', this)">Confirmed Only</button>
                     </div>
                 </div>
 
@@ -133,12 +138,45 @@
                 </div>
             </section>
 
+            <!-- 2. Client CRM Directory Section -->
+            <section class="crm-card" id="sectionClients" style="display: none; margin-top: 24px;">
+                <div class="crm-card-header">
+                    <h2><i class="fas fa-users text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Client CRM Directory & History</h2>
+                    <span style="font-size: 13px; color: #64748b;">Consolidated client profiles from Website & WhatsApp bookings</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="crm-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Client Name</th>
+                                <th>Contact Phone</th>
+                                <th>Total Visits</th>
+                                <th>Total Spend</th>
+                                <th>Last Service Booked</th>
+                                <th>Preferred Channel</th>
+                                <th>Direct Outreach</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">
+                                    Loading client CRM profiles...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
         </main>
     </div>
 
     <!-- Scripts: Zero hardcoding, loads Firebase from /api/config -->
     <script type="module" src="js/firebase-init.js"></script>
     <script src="js/admin-crm.js"></script>
+    <script src="js/chatbot.js"></script>
 
 </body>
 </html>
