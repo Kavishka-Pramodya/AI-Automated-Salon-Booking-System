@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chanu Salon | Real-Time Cloud CRM Portal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+    <!-- 1. Admin PIN Passcode Protection Modal -->
+    <div class="auth-overlay" id="adminAuthOverlay">
+        <div class="auth-card">
+            <div class="auth-crown"><i class="fas fa-shield-alt"></i></div>
+            <h2>Admin CRM Access</h2>
+            <p>Enter your salon administrator passcode to unlock the live cloud dashboard.</p>
+            <form onsubmit="loginAdmin(event)">
+                <input type="password" id="adminPin" class="pin-input" placeholder="••••••••" required autofocus>
+                <button type="submit" class="btn-unlock">Unlock CRM Dashboard</button>
+            </form>
+            <p style="font-size: 11.5px; color: #94a3b8; margin-top: 14px;">Default Passcode: <code>chanu2025</code></p>
+        </div>
+    </div>
+
+    <!-- 2. CRM Dashboard Workspace -->
+    <div id="crmDashboard" style="display: none; width: 100%;">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-crown text-pink" style="color: #f472b6;"></i>
+                <span>CHANU CRM</span>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="#overview" class="active"><i class="fas fa-tachometer-alt"></i> <span>Live Dashboard</span></a>
+                <a href="#bookings"><i class="fas fa-calendar-check"></i> <span>Appointments</span></a>
+                <a href="#whatsapp"><i class="fab fa-whatsapp"></i> <span>WhatsApp Leads</span></a>
+                <a href="index.html" target="_blank"><i class="fas fa-external-link-alt"></i> <span>Open Web Store</span></a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn-sidebar-logout" onclick="logoutAdmin()">
+                    <i class="fas fa-sign-out-alt"></i> <span>Sign Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main CRM Panel -->
+        <main class="main-crm">
+            
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div>
+                    <h1>Omnichannel Salon CRM</h1>
+                    <div class="live-indicator">
+                        <span class="live-dot"></span>
+                        <span>LIVE FIRESTORE REAL-TIME SYNC</span>
+                    </div>
+                </div>
+
+                <div class="top-actions">
+                    <a href="index.html" class="btn-view-site" target="_blank">
+                        <i class="fas fa-store"></i> View Client Booking Page
+                    </a>
+                </div>
+            </header>
+
+            <!-- 4 Glow Metric Stat Cards -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-calendar-day"></i> Today's Appointments</div>
+                    <div class="stat-val" id="statToday">0</div>
+                </div>
+
+                <div class="stat-card blue">
+                    <div class="stat-label"><i class="fas fa-calendar-alt"></i> Upcoming Bookings</div>
+                    <div class="stat-val" id="statUpcoming">0</div>
+                </div>
+
+                <div class="stat-card gold">
+                    <div class="stat-label"><i class="fas fa-coins"></i> Total Projected Revenue</div>
+                    <div class="stat-val" id="statRevenue">Rs. 0</div>
+                </div>
+
+                <div class="stat-card green">
+                    <div class="stat-label"><i class="fas fa-users"></i> Unique Client Base</div>
+                    <div class="stat-val" id="statClients">0 Clients</div>
+                </div>
+            </section>
+
+            <!-- Appointments & Leads Table Card -->
+            <section class="crm-card">
+                <div class="crm-card-header">
+                    <h2><i class="fas fa-stream text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Real-Time Booking & Lead Stream</h2>
+                    
+                    <div class="filter-bar">
+                        <button class="filter-pill active" onclick="setFilter('all', this)">All Stream</button>
+                        <button class="filter-pill" onclick="setFilter('website', this)"><i class="fas fa-globe"></i> Website</button>
+                        <button class="filter-pill" onclick="setFilter('whatsapp', this)"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                        <button class="filter-pill" onclick="setFilter('confirmed', this)">Confirmed Only</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="crm-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Channel</th>
+                                <th>Customer & Phone</th>
+                                <th>Service</th>
+                                <th>Date & Time</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crmTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">
+                                    <i class="fas fa-spinner fa-spin"></i> Connecting to live Cloud Firestore database...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripts: Zero hardcoding, loads Firebase from /api/config -->
+    <script type="module" src="js/firebase-init.js"></script>
+    <script src="js/admin-crm.js"></script>
+
+</body>
+</html>

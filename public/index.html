@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chanu Salon | Premier Hair & Beauty Sanctuary</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- 1. Sticky Luxury Header -->
+    <header class="header">
+        <a href="#" class="logo-brand">
+            <span class="logo-icon"><i class="fas fa-crown"></i></span>
+            <div class="logo-text-group">
+                <span class="logo-title">CHANU SALON</span>
+                <span class="logo-subtitle">HAIR & BEAUTY SANCTUARY</span>
+            </div>
+        </a>
+
+        <nav class="nav">
+            <a href="#hero">Home</a>
+            <a href="#services">Services</a>
+            <a href="#booking-section">Book Slot</a>
+            <a href="#contact">Contact</a>
+        </nav>
+
+        <div class="auth-buttons">
+            <a href="admin.html" class="btn-crm-link"><i class="fas fa-lock"></i> Admin CRM</a>
+            <a href="#booking-section" class="btn-book-nav">Book Appointment</a>
+        </div>
+    </header>
+
+    <!-- 2. Cinematic Hero -->
+    <section class="hero" id="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                <span>PREMIER BEAUTY & WELLNESS SANCTUARY • KULIYAPITIYA</span>
+            </div>
+            
+            <h1 class="hero-title">
+                Where Elegance Meets <br>
+                <span class="text-gradient">Timeless Perfection</span>
+            </h1>
+            
+            <p class="hero-description">
+                Experience bespoke hair couture, cellular facial therapies, and bridal artistry crafted by certified master stylists. Real-time slot booking with zero waiting queues.
+            </p>
+
+            <div class="hero-actions">
+                <a href="#booking-section" class="btn-primary-glow">
+                    <span>Reserve Your Slot</span>
+                    <i class="fas fa-arrow-down"></i>
+                </a>
+                <a href="#services" class="btn-glass">
+                    <i class="fas fa-eye"></i>
+                    <span>Explore Services</span>
+                </a>
+            </div>
+
+            <!-- Trust Metrics Strip -->
+            <div class="trust-metrics">
+                <div class="metric-item">
+                    <div class="metric-value">4.9 <i class="fas fa-star text-gold" style="color: #facc15;"></i></div>
+                    <div class="metric-label">Google Rating</div>
+                </div>
+                <div class="metric-divider"></div>
+                <div class="metric-item">
+                    <div class="metric-value">5,200+</div>
+                    <div class="metric-label">Happy Clients</div>
+                </div>
+                <div class="metric-divider"></div>
+                <div class="metric-item">
+                    <div class="metric-value">12+</div>
+                    <div class="metric-label">Master Stylists</div>
+                </div>
+                <div class="metric-divider"></div>
+                <div class="metric-item">
+                    <div class="metric-value">0 Mins</div>
+                    <div class="metric-label">Waiting Time with Slots</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Signature Services Section -->
+    <section class="services-section" id="services">
+        <div class="section-header">
+            <span class="section-tag">CURATED EXPERIENCES</span>
+            <h2 class="section-title">Designed to Elevate Your Radiance</h2>
+            <p class="section-subtitle">Click any treatment to load it instantly into the live appointment booking form below.</p>
+        </div>
+
+        <div class="services-grid">
+            <!-- Service 1 -->
+            <div class="service-card">
+                <div class="card-img-wrap">
+                    <img src="images/2148108899.jpg" alt="Haircut & Styling">
+                    <span class="card-tag">Popular</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-meta">
+                        <span class="card-category"><i class="fas fa-cut"></i> Hair Couture</span>
+                        <span><i class="far fa-clock"></i> 45 Mins</span>
+                    </div>
+                    <h3 class="card-title">Couture Hair Cutting & Styling</h3>
+                    <p class="card-desc">Tailored precision cut designed to enhance your facial contours, finished with a signature blowout.</p>
+                    <div class="card-footer">
+                        <span class="price-text">Rs. 1,500</span>
+                        <button class="btn-select-service" onclick="selectServiceCard('Couture Hair Cutting & Styling', 45, 1500, 'Hair Couture')">Book Slot</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 2 -->
+            <div class="service-card">
+                <div class="card-img-wrap">
+                    <img src="images/2148660858.jpg" alt="Facial Treatment">
+                    <span class="card-tag" style="background: linear-gradient(135deg, #f59e0b, #d97706);">Radiance</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-meta">
+                        <span class="card-category"><i class="fas fa-spa"></i> Skin Care</span>
+                        <span><i class="far fa-clock"></i> 60 Mins</span>
+                    </div>
+                    <h3 class="card-title">Botanical Gold & Diamond Facials</h3>
+                    <p class="card-desc">Deep-cleansing cellular hydration and micro-massage to restore natural elasticity, firmness, and youth.</p>
+                    <div class="card-footer">
+                        <span class="price-text">Rs. 3,000</span>
+                        <button class="btn-select-service" onclick="selectServiceCard('Botanical Gold & Diamond Facials', 60, 3000, 'Skin Care')">Book Slot</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 3 -->
+            <div class="service-card">
+                <div class="card-img-wrap">
+                    <img src="images/20673.jpg" alt="Hair Coloring">
+                    <span class="card-tag">Trending</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-meta">
+                        <span class="card-category"><i class="fas fa-palette"></i> Color Artistry</span>
+                        <span><i class="far fa-clock"></i> 90 Mins</span>
+                    </div>
+                    <h3 class="card-title">Balayage, Ombre & Creative Tint</h3>
+                    <p class="card-desc">Rich, multi-dimensional hair tones formulated with ammonia-free conditioning glazes for brilliance.</p>
+                    <div class="card-footer">
+                        <span class="price-text">Rs. 5,000</span>
+                        <button class="btn-select-service" onclick="selectServiceCard('Balayage, Ombre & Creative Tint', 90, 5000, 'Color Artistry')">Book Slot</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service 4 -->
+            <div class="service-card">
+                <div class="card-img-wrap">
+                    <img src="images/2148398640.jpg" alt="Bridal Dressing">
+                    <span class="card-tag" style="background: linear-gradient(135deg, #8b5cf6, #ec4899);">Royal Lounge</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-meta">
+                        <span class="card-category"><i class="fas fa-heart"></i> Bridal Dressing</span>
+                        <span><i class="far fa-clock"></i> 180 Mins</span>
+                    </div>
+                    <h3 class="card-title">Kandyan & Western Bridal Dressing</h3>
+                    <p class="card-desc">Comprehensive bridal glamour package including saree draping, high-definition makeup, and jewelry styling.</p>
+                    <div class="card-footer">
+                        <span class="price-text">Rs. 15,000</span>
+                        <button class="btn-select-service" onclick="selectServiceCard('Kandyan & Western Bridal Dressing', 180, 15000, 'Bridal Dressing')">Book Slot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Real-time Firebase Booking Section -->
+    <section class="booking-section" id="booking-section">
+        <div class="booking-wrapper">
+            <div class="section-header">
+                <span class="section-tag">SMART APPOINTMENT SYSTEM</span>
+                <h2 class="section-title">Schedule Your Salon Visit</h2>
+                <p class="section-subtitle">Pick your date, choose your treatment, and select an open 30-minute block.</p>
+            </div>
+
+            <div class="booking-grid">
+                <!-- Left: Booking Form -->
+                <div class="booking-form-box">
+                    <form id="bookingForm" onsubmit="handleBookingSubmit(event)">
+                        
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="custName"><i class="fas fa-user"></i> Your Full Name</label>
+                                <input type="text" id="custName" placeholder="E.g., Anuki Perera" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custPhone"><i class="fas fa-phone"></i> Mobile / WhatsApp</label>
+                                <input type="tel" id="custPhone" placeholder="071xxxxxxx" pattern="[0-9]{10}" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="bookingDate"><i class="far fa-calendar-alt"></i> Select Date</label>
+                                <input type="date" id="bookingDate" min="" onchange="onDateChange()" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="bookingServiceSelect"><i class="fas fa-magic"></i> Select Treatment</label>
+                                <select id="bookingServiceSelect" onchange="onServiceChange()" required>
+                                    <option value="">-- Choose Desired Treatment --</option>
+                                    <option value="haircut" data-name="Couture Hair Cutting & Styling" data-duration="45" data-price="1500" data-category="Hair Couture">
+                                        Couture Haircut (45 Mins) • Rs. 1,500
+                                    </option>
+                                    <option value="facial" data-name="Botanical Gold & Diamond Facials" data-duration="60" data-price="3000" data-category="Skin Care">
+                                        Botanical Gold Facial (60 Mins) • Rs. 3,000
+                                    </option>
+                                    <option value="color" data-name="Balayage, Ombre & Creative Tint" data-duration="90" data-price="5000" data-category="Color Artistry">
+                                        Balayage Hair Color (90 Mins) • Rs. 5,000
+                                    </option>
+                                    <option value="bridal" data-name="Kandyan & Western Bridal Dressing" data-duration="180" data-price="15000" data-category="Bridal Dressing">
+                                        Royal Bridal Dressing (180 Mins) • Rs. 15,000
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Available 30-min Slot Chips -->
+                        <div class="form-group">
+                            <label><i class="far fa-clock"></i> Available 30-Min Time Slots</label>
+                            <div class="slots-container" id="slotsContainer">
+                                <div class="slot-instruction">
+                                    <i class="fas fa-calendar-day"></i>
+                                    <span>Please select a date and treatment above to load real-time slot availability.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-confirm-booking" id="btnSubmitBooking" disabled>
+                            <span>Confirm Appointment</span>
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right: Live Receipt Summary Card -->
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <i class="fas fa-receipt"></i>
+                        <h3>Appointment Summary</h3>
+                    </div>
+                    <div class="summary-list">
+                        <div class="sum-item">
+                            <span class="sum-label">Salon Location:</span>
+                            <span class="sum-val">Kuliyapitiya, Main St.</span>
+                        </div>
+                        <div class="sum-item">
+                            <span class="sum-label">Selected Date:</span>
+                            <span class="sum-val" id="sumDate">Not selected</span>
+                        </div>
+                        <div class="sum-item">
+                            <span class="sum-label">Selected Treatment:</span>
+                            <span class="sum-val" id="sumService">Not selected</span>
+                        </div>
+                        <div class="sum-item">
+                            <span class="sum-label">Duration:</span>
+                            <span class="sum-val" id="sumDuration">-- Mins</span>
+                        </div>
+                        <div class="sum-item">
+                            <span class="sum-label">Selected Slot:</span>
+                            <span class="sum-val highlight" id="sumTime">--:--</span>
+                        </div>
+                        <div class="sum-total-box">
+                            <span class="total-title">Total Due:</span>
+                            <span class="total-amount" id="sumPrice">Rs. 0</span>
+                        </div>
+                    </div>
+                    <div class="summary-badge-note">
+                        <i class="fas fa-shield-alt"></i> Instant Cloud confirmation. Pay comfortably at salon reception.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Contact & WhatsApp Strip -->
+    <section class="services-section" id="contact" style="background: #ffffff; padding: 50px 5%;">
+        <div class="trust-metrics" style="background: #faf8f5; border: 1px solid #e2e8f0; color: #0f172a; max-width: 900px;">
+            <div class="metric-item">
+                <div class="metric-value" style="color: #0f172a; font-size: 16px;"><i class="fas fa-clock text-rose" style="color: var(--primary-rose);"></i> Mon – Sat</div>
+                <div class="metric-label" style="color: #64748b;">9:00 AM – 6:00 PM</div>
+            </div>
+            <div class="metric-divider" style="background: #cbd5e1;"></div>
+            <div class="metric-item">
+                <div class="metric-value" style="color: #0f172a; font-size: 16px;"><i class="fas fa-map-marker-alt" style="color: var(--primary-rose);"></i> Kuliyapitiya</div>
+                <div class="metric-label" style="color: #64748b;">Main Street, Sri Lanka</div>
+            </div>
+            <div class="metric-divider" style="background: #cbd5e1;"></div>
+            <div class="metric-item">
+                <a href="https://wa.me/94704468888" target="_blank" style="text-decoration: none; background: #25d366; color: white; padding: 10px 20px; border-radius: 99px; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fab fa-whatsapp"></i> WhatsApp Concierge
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">CHANU SALON</div>
+            <div class="footer-links">
+                <a href="#hero">Home</a>
+                <a href="#services">Services</a>
+                <a href="#booking-section">Book Online</a>
+                <a href="admin.html">Admin CRM</a>
+            </div>
+        </div>
+        <p style="margin-top: 16px;">&copy; 2025 Chanu Salon. All Rights Reserved. | Powered by Firebase & Vercel.</p>
+    </footer>
+
+    <!-- 7. Booking Success Modal -->
+    <div class="modal-overlay" id="bookingSuccessModal">
+        <div class="success-modal">
+            <div class="success-icon"><i class="fas fa-check"></i></div>
+            <h3>Appointment Confirmed!</h3>
+            <p>Your reservation is securely saved in our real-time database.</p>
+            
+            <div class="booking-receipt-box">
+                <div><strong>Client:</strong> <span id="modalCustName">--</span></div>
+                <div><strong>Service:</strong> <span id="modalService">--</span></div>
+                <div><strong>Date & Time:</strong> <span id="modalDateTime">--</span></div>
+                <div><strong>Estimated Total:</strong> <span id="modalPrice">--</span></div>
+            </div>
+
+            <button class="btn-modal-close" onclick="closeSuccessModal()">Great, Thank You!</button>
+        </div>
+    </div>
+
+    <!-- 8. Floating AI Stylist Widget -->
+    <div class="ai-stylist-widget" id="aiStylistWidget" onclick="toggleAIChat()">
+        <div class="ai-widget-icon">
+            <i class="fas fa-wand-magic-sparkles"></i>
+        </div>
+        <div class="ai-widget-text">
+            <span class="ai-badge-title">AI Stylist</span>
+            <span class="ai-badge-sub">Ask pricing & advice</span>
+        </div>
+    </div>
+
+    <!-- AI Chat Modal Popup -->
+    <div class="ai-chat-modal" id="aiChatModal">
+        <div class="ai-modal-header">
+            <div class="ai-header-left">
+                <div class="ai-avatar"><i class="fas fa-robot"></i></div>
+                <div>
+                    <h4>Anya | AI Stylist</h4>
+                    <span class="ai-online-status">Online • Instant Answers</span>
+                </div>
+            </div>
+            <button class="ai-close-btn" onclick="toggleAIChat()">&times;</button>
+        </div>
+        <div class="ai-modal-body" id="aiChatBody">
+            <div class="ai-msg bot">
+                Hello gorgeous! 👋 I am Anya, your Chanu Salon AI beauty advisor. Ask me anything about our services, bridal packages, or booking!
+            </div>
+            <div class="ai-quick-prompts">
+                <button onclick="askPrompt('What are your hair cutting rates?')">✂️ Haircut rates?</button>
+                <button onclick="askPrompt('How do I book a time slot?')">📅 How to book a slot?</button>
+                <button onclick="askPrompt('What are the benefits of your Gold facial?')">✨ Gold facial benefits?</button>
+            </div>
+        </div>
+        <div class="ai-modal-footer">
+            <input type="text" id="aiInput" placeholder="Ask about styling, pricing, slots..." onkeypress="handleAIKeyPress(event)">
+            <button onclick="sendAIMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Scripts: Zero hardcoding, loads Firebase from /api/config -->
+    <script type="module" src="js/firebase-init.js"></script>
+    <script src="js/booking.js"></script>
+    <script src="js/chatbot.js"></script>
+
+    <script>
+        // Set minimum date to today
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('bookingDate');
+            if (dateInput) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.min = today;
+                dateInput.value = today;
+            }
+        });
+    </script>
+</body>
+</html>

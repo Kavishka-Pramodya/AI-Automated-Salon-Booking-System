@@ -1,0 +1,482 @@
+/* ==========================================================================
+   CHANU SALON - REAL-TIME CLOUD CRM STYLESHEET
+   ========================================================================== */
+
+:root {
+    --crm-primary: #db2777;
+    --crm-pink: #ec4899;
+    --crm-gradient: linear-gradient(135deg, #ec4899 0%, #e11d48 50%, #f97316 100%);
+    --crm-bg: #f8fafc;
+    --crm-sidebar: #0f172a;
+    --crm-card: #ffffff;
+    --crm-border: #e2e8f0;
+    --font-heading: 'Playfair Display', Georgia, serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--crm-bg);
+    color: #0f172a;
+    display: flex;
+    min-height: 100vh;
+}
+
+/* 1. Admin Auth Overlay */
+.auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, #1e1b4b 0%, #0b0f19 100%);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.auth-card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 40px 32px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+}
+
+.auth-crown {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    background: #fdf2f8;
+    color: var(--crm-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 14px;
+}
+
+.auth-card h2 {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    margin-bottom: 6px;
+}
+
+.auth-card p {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 24px;
+}
+
+.pin-input {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 16px;
+    text-align: center;
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+    outline: none;
+}
+
+.pin-input:focus {
+    border-color: var(--crm-pink);
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
+}
+
+.btn-unlock {
+    width: 100%;
+    padding: 13px;
+    background: var(--crm-gradient);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(225, 29, 72, 0.35);
+}
+
+/* 2. Sidebar */
+.sidebar {
+    width: 260px;
+    background: var(--crm-sidebar);
+    color: #ffffff;
+    padding: 24px 16px;
+    position: fixed;
+    height: 100%;
+    overflow-y: auto;
+    z-index: 100;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #fbcfe8;
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.25s ease;
+}
+
+.sidebar-menu a:hover, .sidebar-menu a.active {
+    background: rgba(219, 39, 119, 0.18);
+    color: #ffffff;
+}
+
+.sidebar-menu a i {
+    width: 20px;
+    text-align: center;
+    color: #f472b6;
+}
+
+.sidebar-footer {
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-sidebar-logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ef4444;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.1);
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+}
+
+.btn-sidebar-logout:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* 3. Main CRM Content */
+.main-crm {
+    margin-left: 260px;
+    padding: 24px 32px 50px;
+    flex-grow: 1;
+    max-width: calc(100vw - 260px);
+}
+
+.top-bar {
+    background: #ffffff;
+    padding: 16px 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px;
+    border: 1px solid var(--crm-border);
+}
+
+.top-bar h1 {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ecfdf5;
+    color: #047857;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 99px;
+    border: 1px solid #a7f3d0;
+}
+
+.live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: livePulse 1.5s infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.top-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-view-site {
+    text-decoration: none;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 99px;
+    border: 1px solid #cbd5e1;
+}
+
+/* 4. Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: #ffffff;
+    padding: 22px 24px;
+    border-radius: 18px;
+    border: 1px solid var(--crm-border);
+    border-top: 4px solid var(--crm-primary);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    transition: all 0.25s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card.blue { border-top-color: #3b82f6; }
+.stat-card.gold { border-top-color: #f59e0b; }
+.stat-card.green { border-top-color: #10b981; }
+
+.stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+/* 5. CRM Table & Filters */
+.crm-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 26px;
+    border: 1px solid var(--crm-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.crm-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.crm-card-header h2 {
+    font-family: var(--font-heading);
+    font-size: 19px;
+    font-weight: 700;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-pill {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-pill.active {
+    background: var(--crm-gradient);
+    color: #ffffff;
+    border-color: transparent;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.crm-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.crm-table th, .crm-table td {
+    padding: 13px 14px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+}
+
+.crm-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+.crm-table tbody tr:hover {
+    background: #faf5ff;
+}
+
+/* Omnichannel Badges */
+.badge-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-channel.wa {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.badge-channel.web {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.client-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.client-phone {
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+.slot-pill {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #334155;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.status-confirmed { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.status-completed { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+.status-cancelled { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.status-pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+
+/* Actions */
+.action-buttons-group {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-action {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.2s ease;
+}
+
+.btn-action.check { background: #dcfce7; color: #15803d; }
+.btn-action.complete { background: #eff6ff; color: #1d4ed8; }
+.btn-action.cancel { background: #fef2f2; color: #b91c1c; }
+.btn-action.wa-btn { background: #25d366; color: #ffffff; text-decoration: none; }
+
+.btn-action:hover {
+    transform: scale(1.1);
+}
+
+@media (max-width: 900px) {
+    .sidebar { width: 70px; padding: 16px 8px; }
+    .sidebar-brand span { display: none; }
+    .sidebar-menu a span { display: none; }
+    .main-crm { margin-left: 70px; max-width: calc(100vw - 70px); padding: 18px; }
+}
