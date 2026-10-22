@@ -3,7 +3,6 @@
 // Auto-mounts on ANY webpage (Home, Login, Register, Admin CRM)
 
 (function() {
-    // 1. Auto-inject CSS stylesheet if missing
     function ensureStylesheets() {
         if (!document.querySelector('link[href*="chatbot.css"]')) {
             const link = document.createElement('link');
@@ -19,11 +18,9 @@
         }
     }
 
-    // 2. Mount UI
     function injectChatbotHTML() {
         ensureStylesheets();
 
-        // If old hardcoded widget exists, remove it so the new spacious widget mounts cleanly
         const oldWidget = document.getElementById('aiStylistWidget');
         if (oldWidget) oldWidget.remove();
         const oldModal = document.getElementById('aiChatModal');
@@ -31,7 +28,6 @@
 
         if (document.getElementById('aiChatbotMount')) return;
 
-        // Create Container
         const container = document.createElement('div');
         container.id = 'aiChatbotMount';
         container.innerHTML = `
@@ -66,10 +62,11 @@
                         <button onclick="askPrompt('What are your couture haircut rates?')"><i class="fas fa-cut" style="color: #e11d48;"></i> Haircut rates?</button>
                         <button onclick="askPrompt('What are the benefits of your Gold & Diamond facials?')"><i class="fas fa-sparkles" style="color: #e11d48;"></i> Facial treatments?</button>
                         <button onclick="askPrompt('How can I book an appointment slot?')"><i class="far fa-calendar-check" style="color: #e11d48;"></i> How to book a slot?</button>
+                        <button onclick="requestCallbackLead()"><i class="fas fa-phone-alt" style="color: #e11d48;"></i> Request VIP Callback / Book</button>
                     </div>
                 </div>
                 <div class="ai-modal-footer">
-                    <input type="text" id="aiInput" placeholder="Ask about styling, pricing, slots..." onkeypress="handleAIKeyPress(event)" autocomplete="off">
+                    <input type="text" id="aiInput" placeholder="Ask about styling, pricing, slots, or leave your phone..." onkeypress="handleAIKeyPress(event)" autocomplete="off">
                     <button onclick="sendAIMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -83,7 +80,6 @@
         injectChatbotHTML();
     }
 
-    // Close on Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const modal = document.getElementById('aiChatModal');
@@ -109,6 +105,50 @@ window.askPrompt = function(question) {
     if (input) {
         input.value = question;
         window.sendAIMessage();
+    }
+};
+
+window.requestCallbackLead = function() {
+    const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
+    const chatBody = document.getElementById('aiChatBody');
+    if (!chatBody) return;
+
+    if (user && user.phone) {
+        const text = `Please have the reception team call me (${user.fullName || user.username} - ${user.phone}) to book my treatment appointment.`;
+        const userDiv = document.createElement('div');
+        userDiv.className = 'ai-msg user';
+        userDiv.textContent = text;
+        chatBody.appendChild(userDiv);
+
+        const botDiv = document.createElement('div');
+        botDiv.className = 'ai-msg bot';
+        botDiv.innerHTML = `🌸 Wonderful, <strong>${escapeHtml(user.fullName || user.username)}</strong>! I have immediately logged your booking inquiry into our <strong>Live Cloud CRM</strong>. Our master stylists will contact you at <code>${escapeHtml(user.phone)}</code> shortly!`;
+        chatBody.appendChild(botDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        // Fire background lead to API
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: text,
+                name: user.fullName || user.username,
+                phone: user.phone,
+                is_lead: true
+            })
+        }).catch(() => {});
+    } else {
+        const botDiv = document.createElement('div');
+        botDiv.className = 'ai-msg bot';
+        botDiv.innerHTML = `I would love to have our team contact you! 🌸 Please enter your <strong>Mobile Number</strong> in the box below so our reception can connect with you.`;
+        chatBody.appendChild(botDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+
+        const input = document.getElementById('aiInput');
+        if (input) {
+            input.placeholder = "Enter your phone (e.g. 071XXXXXXX)...";
+            input.focus();
+        }
     }
 };
 
@@ -141,23 +181,37 @@ window.sendAIMessage = async function() {
     chatBody.appendChild(typingDiv);
     chatBody.scrollTop = chatBody.scrollHeight;
 
+    const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
+    const payload = {
+        message: text,
+        name: user ? (user.fullName || user.username) : "Website Visitor",
+        phone: user ? (user.phone || "") : ""
+    };
+
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify(payload)
         });
 
         let replyText = "";
+        let leadSaved = false;
+
         if (response.ok) {
             const data = await response.json();
             replyText = data.reply || "Thank you for asking! How else may I assist you with your salon experience?";
+            leadSaved = data.lead_saved;
         } else {
             replyText = "Hello from Chanu Salon! 🌸 Our services include Couture Haircuts (Rs. 1,500), Facials (Rs. 3,000), and Color (Rs. 5,000). You can reserve an exact slot directly on this page or call 070 446 8888!";
         }
 
         typingDiv.classList.remove('typing');
-        typingDiv.innerHTML = formatChatText(replyText);
+        let formatted = formatChatText(replyText);
+        if (leadSaved) {
+            formatted += `<div style="margin-top: 8px; font-size: 11.5px; color: #059669; font-weight: 700;"><i class="fas fa-check-circle"></i> Your contact has been registered into our Live CRM Lead Stream!</div>`;
+        }
+        typingDiv.innerHTML = formatted;
     } catch (err) {
         typingDiv.classList.remove('typing');
         typingDiv.innerHTML = "I am ready to help! 🌸 Please call our salon desk at <strong>070 446 8888</strong> or book your slot right here.";
@@ -168,9 +222,7 @@ window.sendAIMessage = async function() {
 
 function formatChatText(str) {
     if (!str) return '';
-    // Convert *bold* to <strong>bold</strong>
     let formatted = str.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-    // Convert newlines to <br>
     formatted = formatted.replace(/\n/g, '<br>');
     return formatted;
 }
