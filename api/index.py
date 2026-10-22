@@ -145,19 +145,18 @@ def handle_whatsapp():
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'OPTIONS'])
 @app.route('/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
 def dispatch(path):
-    clean = path.strip('/').lower()
-    req_full = request.path.strip('/').lower()
+    action = request.args.get('action', '').lower().strip()
+    req_full = request.path.lower().strip()
+    target = f"{action} {req_full} {path.lower().strip()}"
 
-    if clean.endswith('config') or req_full.endswith('config'):
+    if 'config' in target:
         return handle_config()
-    elif clean.endswith('chat') or req_full.endswith('chat'):
+    elif 'chat' in target:
         return handle_chat()
-    elif clean.endswith('whatsapp_webhook') or req_full.endswith('whatsapp_webhook'):
+    elif 'whatsapp' in target:
         return handle_whatsapp()
-    elif clean.endswith('health') or req_full.endswith('health') or clean == 'api' or clean == '':
+    else:
         return jsonify({"status": "ok", "service": "Chanu Salon Serverless API", "active": True})
-
-    return jsonify({"error": "Route not found", "path": path, "request_path": request.path}), 404
 
 handler = app
 
