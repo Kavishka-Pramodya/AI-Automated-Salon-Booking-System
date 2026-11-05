@@ -400,7 +400,25 @@ window.toggleScheduleDay = function(idx) {
     }
 };
 
-// 7. TAB 5: REAL-TIME CLOUD CRM & OMNICHANNEL STREAM
+// ==============================================================================
+// 7. BUSINESS BRAIN: THE MEMORY, THE SENSES & THE REFLEXES (Salesforce Framework)
+// ==============================================================================
+
+let activeLifecycleFilter = 'all';
+let selectedCustomerPhone = null;
+
+// Normalize Phone Number (The Senses: Accuracy & Consistency)
+function normalizePhone(raw) {
+    if (!raw) return "";
+    let clean = String(raw).replace(/[^0-9]/g, '');
+    if (clean.startsWith('94') && clean.length === 11) {
+        clean = '0' + clean.substring(2);
+    } else if (clean.startsWith('7') && clean.length === 9) {
+        clean = '0' + clean;
+    }
+    return clean;
+}
+
 function initRealtimeCRM() {
     if (!window.salonDB || !window.salonDB.db) {
         window.addEventListener('firebase-ready', () => {
@@ -434,6 +452,8 @@ function attachFirestoreListener() {
             });
 
             updateOverviewStats();
+            handleEscalations();
+            calculateDataQuality();
             renderCRMTable();
             renderClientsTable();
             renderTodayScheduleTable();
@@ -448,6 +468,105 @@ function attachFirestoreListener() {
     }
 }
 
+// ------------------------------------------------------------------------------
+// THE REFLEXES: HUMAN ESCALATION DETECTOR & ALERT (Slide 23 & 25)
+// ------------------------------------------------------------------------------
+function handleEscalations() {
+    const escalations = allAppointments.filter(x => x.isEscalated === true || x.status === 'Escalated');
+    const badge = document.getElementById('escalatedCountBadge');
+    const statBadge = document.getElementById('statEscalationsCount');
+    const banner = document.getElementById('escalationAlertBanner');
+    const actionBtns = document.getElementById('escalationActionBtns');
+
+    if (badge) badge.textContent = escalations.length;
+    if (statBadge) statBadge.textContent = escalations.length;
+
+    if (!banner) return;
+
+    if (escalations.length > 0) {
+        banner.style.display = 'flex';
+        const urgent = escalations[0];
+        let phone = normalizePhone(urgent.customerPhone);
+        let intlPhone = phone.startsWith('0') ? '94' + phone.substring(1) : phone;
+        const msg = encodeURIComponent(`Dear ${urgent.customerName || 'Client'}, this is the Salon Director at Chanu Salon. Our AI concierge alerted us regarding your inquiry. I am personally following up to make sure your experience is perfect.`);
+        
+        if (actionBtns) {
+            actionBtns.innerHTML = `
+                <a href="https://wa.me/${intlPhone}?text=${msg}" target="_blank" class="btn-save-form" style="background: #dc2626; padding: 8px 14px; font-size: 12px; text-decoration: none;">
+                    <i class="fab fa-whatsapp"></i> Resolve on WhatsApp
+                </a>
+                <button class="btn-edit-row" onclick="updateStatus('${urgent.id}', 'Confirmed')" style="background: #ffffff; border-color: #f87171; color: #dc2626;">
+                    Mark Resolved
+                </button>
+            `;
+        }
+    } else {
+        banner.style.display = 'none';
+    }
+}
+
+// ------------------------------------------------------------------------------
+// THE SENSES: 5 DATA QUALITY CHECKS & HEALTH SCORE (Slide 14 & 15)
+// Complete, Accurate, Consistent, Timely, Unique
+// ------------------------------------------------------------------------------
+function calculateDataQuality() {
+    if (allAppointments.length === 0) return;
+
+    let completenessPass = 0;
+    let accuracyPass = 0;
+    let consistencyPass = 0;
+    let timelinessPass = 0;
+    let uniquenessMap = new Set();
+    let duplicatesCount = 0;
+
+    allAppointments.forEach(item => {
+        // 1. Complete: Has name & phone
+        if (item.customerName && item.customerPhone) completenessPass++;
+
+        // 2. Accurate: Sri Lankan mobile format (07X XXX XXXX)
+        const clean = normalizePhone(item.customerPhone);
+        if (/^07[0-9]{8}$/.test(clean)) accuracyPass++;
+
+        // 3. Consistent: Clean service and casing
+        if (item.service && item.customerName && item.customerName !== item.customerName.toLowerCase()) consistencyPass++;
+
+        // 4. Timely: Has valid date
+        if (item.bookingDate && item.bookingDate.length >= 8) timelinessPass++;
+
+        // 5. Unique: Deduplication check
+        if (clean) {
+            if (uniquenessMap.has(clean)) duplicatesCount++;
+            else uniquenessMap.add(clean);
+        }
+    });
+
+    const total = allAppointments.length;
+    const completenessScore = (completenessPass / total) * 20;
+    const accuracyScore = (accuracyPass / total) * 25;
+    const consistencyScore = (consistencyPass / total) * 20;
+    const timelinessScore = (timelinessPass / total) * 15;
+    const uniquenessScore = Math.max(0, 20 - (duplicatesCount * 2));
+
+    const totalHealth = Math.round(completenessScore + accuracyScore + consistencyScore + timelinessScore + uniquenessScore);
+
+    const badge = document.getElementById('dataHealthScoreBadge');
+    const bar = document.getElementById('dataHealthBar');
+    const summary = document.getElementById('dataHealthQualitySummary');
+    const statHealth = document.getElementById('statDataHealth');
+
+    if (badge) badge.textContent = `${totalHealth}% HEALTH`;
+    if (bar) bar.style.width = `${totalHealth}%`;
+    if (statHealth) statHealth.textContent = `${totalHealth}%`;
+    if (summary) {
+        summary.textContent = duplicatesCount === 0 
+            ? "Unified 0 Duplicate Conflicts" 
+            : `${duplicatesCount} Records Resolved into Customer 360`;
+    }
+}
+
+// ------------------------------------------------------------------------------
+// OVERVIEW STATS
+// ------------------------------------------------------------------------------
 function updateOverviewStats() {
     const todayStr = new Date().toISOString().split('T')[0];
     let todayCount = 0;
@@ -471,6 +590,9 @@ function updateOverviewStats() {
     if (todayDateBadge) todayDateBadge.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+// ------------------------------------------------------------------------------
+// TODAY SCHEDULE
+// ------------------------------------------------------------------------------
 function renderTodayScheduleTable() {
     const tbody = document.getElementById('todayScheduleBody');
     if (!tbody) return;
@@ -501,6 +623,7 @@ function renderTodayScheduleTable() {
         if (item.status === 'Confirmed') statusClass = 'status-confirmed';
         else if (item.status === 'Completed') statusClass = 'status-completed';
         else if (item.status === 'Cancelled') statusClass = 'status-cancelled';
+        else if (item.status === 'Escalated') statusClass = 'status-cancelled';
 
         html += `
             <tr>
@@ -518,6 +641,9 @@ function renderTodayScheduleTable() {
     tbody.innerHTML = html;
 }
 
+// ------------------------------------------------------------------------------
+// REAL-TIME OMNICHANNEL CRM STREAM TABLE
+// ------------------------------------------------------------------------------
 function renderCRMTable() {
     const tableBody = document.getElementById('crmTableBody');
     if (!tableBody) return;
@@ -529,6 +655,8 @@ function renderCRMTable() {
         filtered = allAppointments.filter(x => x.channel === 'whatsapp');
     } else if (activeFilter === 'confirmed') {
         filtered = allAppointments.filter(x => x.status === 'Confirmed');
+    } else if (activeFilter === 'escalated') {
+        filtered = allAppointments.filter(x => x.isEscalated === true || x.status === 'Escalated');
     }
 
     if (filtered.length === 0) {
@@ -554,20 +682,22 @@ function renderCRMTable() {
         if (item.status === 'Confirmed') statusClass = 'status-confirmed';
         else if (item.status === 'Completed') statusClass = 'status-completed';
         else if (item.status === 'Cancelled') statusClass = 'status-cancelled';
+        else if (item.status === 'Escalated' || item.isEscalated) statusClass = 'status-cancelled';
 
-        let cleanPhone = (item.customerPhone || "").replace(/[^0-9]/g, '');
-        if (cleanPhone.startsWith('0')) cleanPhone = '94' + cleanPhone.substring(1);
-        const waMsg = encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon confirming your appointment for ${item.service} on ${item.bookingDate} at ${item.bookingTime}.`);
-        const waLink = `https://wa.me/${cleanPhone}?text=${waMsg}`;
+        let cleanPhone = normalizePhone(item.customerPhone);
+        let intlPhone = cleanPhone.startsWith('0') ? '94' + cleanPhone.substring(1) : cleanPhone;
+        const waMsg = encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon regarding your inquiry for ${item.service} on ${item.bookingDate} at ${item.bookingTime}.`);
+        const waLink = `https://wa.me/${intlPhone}?text=${waMsg}`;
 
         rowsHtml += `
-            <tr>
+            <tr ${item.isEscalated ? 'style="background: #fff5f5;"' : ''}>
                 <td><strong>#${index + 1}</strong></td>
                 <td>${channelBadge}</td>
                 <td>
                     <div class="client-cell">
                         <strong>${escapeHtml(item.customerName || 'Valued Client')}</strong>
                         <span class="client-phone"><i class="fas fa-phone-alt"></i> ${escapeHtml(item.customerPhone || 'N/A')}</span>
+                        ${item.isEscalated ? `<span style="font-size: 10px; color: #dc2626; font-weight: 800;"><i class="fas fa-exclamation-circle"></i> ESCALATED</span>` : ''}
                     </div>
                 </td>
                 <td>
@@ -595,14 +725,16 @@ function renderCRMTable() {
     tableBody.innerHTML = rowsHtml;
 }
 
-function renderClientsTable() {
-    const clientsBody = document.getElementById('clientsTableBody');
-    if (!clientsBody) return;
-
+// ------------------------------------------------------------------------------
+// THE MEMORY: CUSTOMER 360 DIRECTORY & 5-STAGE LIFECYCLE (Slide 8, 10, 16)
+// Lead -> Prospect -> Customer -> Repeat -> Advocate
+// ------------------------------------------------------------------------------
+function buildCustomer360Profiles() {
     const clientsMap = {};
 
     allAppointments.forEach(item => {
-        const phone = (item.customerPhone || "").trim();
+        const rawPhone = (item.customerPhone || "").trim();
+        const phone = normalizePhone(rawPhone) || rawPhone;
         if (!phone) return;
 
         if (!clientsMap[phone]) {
@@ -613,54 +745,143 @@ function renderClientsTable() {
                 totalSpend: 0,
                 lastService: item.service || 'Hair Treatment',
                 lastDate: item.bookingDate || '',
-                channels: new Set()
+                channels: new Set(),
+                appointments: [],
+                hasEscalation: false,
+                stage: 'Lead',
+                isChurnRisk: false
             };
         }
 
-        clientsMap[phone].visits++;
+        const profile = clientsMap[phone];
+        profile.appointments.push(item);
+        if (item.channel) profile.channels.add(item.channel);
+        if (item.isEscalated || item.status === 'Escalated') profile.hasEscalation = true;
+
         if (item.status === 'Confirmed' || item.status === 'Completed') {
-            clientsMap[phone].totalSpend += Number(item.price || 0);
+            profile.visits++;
+            profile.totalSpend += Number(item.price || 0);
         }
-        if (item.channel) {
-            clientsMap[phone].channels.add(item.channel);
-        }
-        if (item.bookingDate && item.bookingDate >= clientsMap[phone].lastDate) {
-            clientsMap[phone].lastDate = item.bookingDate;
-            clientsMap[phone].lastService = item.service || clientsMap[phone].lastService;
+
+        if (item.bookingDate && item.bookingDate >= profile.lastDate) {
+            profile.lastDate = item.bookingDate;
+            profile.lastService = item.service || profile.lastService;
+            if (item.customerName && item.customerName !== 'Website Visitor') {
+                profile.name = item.customerName;
+            }
         }
     });
 
-    const clientList = Object.values(clientsMap);
+    // Compute Lifecycle Stages & Churn Risk
+    const today = new Date();
+    let churnRiskCount = 0;
+
+    Object.values(clientsMap).forEach(c => {
+        // 5 Lifecycle Stages (Slide 10)
+        if (c.visits >= 5 || c.totalSpend >= 20000) {
+            c.stage = 'Advocate';
+        } else if (c.visits >= 2) {
+            c.stage = 'Repeat';
+        } else if (c.visits === 1) {
+            c.stage = 'Customer';
+        } else if (c.appointments.length > 0 && c.appointments.some(a => a.status === 'Pending' || a.service.includes('Booking'))) {
+            c.stage = 'Prospect';
+        } else {
+            c.stage = 'Lead';
+        }
+
+        // Predictive Churn Risk (Slide 16): > 30 days without return for existing customers
+        if (c.lastDate && (c.stage === 'Customer' || c.stage === 'Repeat' || c.stage === 'Advocate')) {
+            const lastBooking = new Date(c.lastDate);
+            const diffDays = Math.round((today - lastBooking) / (1000 * 60 * 60 * 24));
+            if (diffDays > 30) {
+                c.isChurnRisk = true;
+                churnRiskCount++;
+            }
+        }
+    });
+
+    const churnBadge = document.getElementById('churnRiskCountBadge');
+    if (churnBadge) churnBadge.textContent = churnRiskCount;
+
+    const statUnified = document.getElementById('statUnifiedClients');
+    if (statUnified) statUnified.textContent = Object.keys(clientsMap).length;
+
+    return clientsMap;
+}
+
+function renderClientsTable() {
+    const clientsBody = document.getElementById('clientsTableBody');
+    if (!clientsBody) return;
+
+    const clientsMap = buildCustomer360Profiles();
+    let clientList = Object.values(clientsMap);
+
+    // Apply Lifecycle Filter
+    if (activeLifecycleFilter === 'churn_risk') {
+        clientList = clientList.filter(c => c.isChurnRisk);
+    } else if (activeLifecycleFilter !== 'all') {
+        clientList = clientList.filter(c => c.stage === activeLifecycleFilter);
+    }
+
     clientList.sort((a, b) => b.totalSpend - a.totalSpend);
 
     if (clientList.length === 0) {
-        clientsBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: #94a3b8;">No client CRM profiles recorded yet.</td></tr>`;
+        clientsBody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #94a3b8;">No customer profiles match the '${activeLifecycleFilter}' filter.</td></tr>`;
         return;
     }
 
     let html = '';
     clientList.forEach((c, idx) => {
-        let cleanPhone = c.phone.replace(/[^0-9]/g, '');
-        if (cleanPhone.startsWith('0')) cleanPhone = '94' + cleanPhone.substring(1);
-        const waMsg = encodeURIComponent(`Hello ${c.name}! This is Chanu Salon reaching out to check on your recent experience and invite you to our latest VIP beauty offers.`);
-        const waLink = `https://wa.me/${cleanPhone}?text=${waMsg}`;
+        let cleanPhone = normalizePhone(c.phone);
+        let intlPhone = cleanPhone.startsWith('0') ? '94' + cleanPhone.substring(1) : cleanPhone;
+        
+        // Stage Badge Styling (Slide 10)
+        let stageClass = 'stage-lead';
+        if (c.stage === 'Prospect') stageClass = 'stage-prospect';
+        else if (c.stage === 'Customer') stageClass = 'stage-customer';
+        else if (c.stage === 'Repeat') stageClass = 'stage-repeat';
+        else if (c.stage === 'Advocate') stageClass = 'stage-advocate';
+
+        const waMsg = encodeURIComponent(
+            c.isChurnRisk 
+                ? `Hello ${c.name}! We've missed pampering you at Chanu Salon. 🌸 Enjoy an exclusive 15% VIP Return Courtesy on your next hair or facial treatment this month!`
+                : `Hello ${c.name}! This is Chanu Salon checking in. Let us know if you'd like to reserve your next VIP beauty slot!`
+        );
+        const waLink = `https://wa.me/${intlPhone}?text=${waMsg}`;
         const channelsArr = Array.from(c.channels);
 
         html += `
-            <tr>
+            <tr style="cursor: pointer;" onclick="openCustomer360('${cleanPhone}')">
                 <td><strong>#${idx + 1}</strong></td>
-                <td><strong>${escapeHtml(c.name)}</strong></td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 28px; height: 28px; border-radius: 50%; background: #fdf2f8; color: var(--crm-primary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;">
+                            ${escapeHtml(c.name.substring(0, 2).toUpperCase())}
+                        </div>
+                        <strong>${escapeHtml(c.name)}</strong>
+                    </div>
+                </td>
                 <td><code><i class="fas fa-phone"></i> ${escapeHtml(c.phone)}</code></td>
-                <td><span class="slot-pill">${c.visits} Appointments</span></td>
+                <td><span class="stage-badge ${stageClass}">${escapeHtml(c.stage)}</span></td>
+                <td><span class="slot-pill">${c.visits} Bookings</span></td>
                 <td><strong style="color: #059669;">Rs. ${c.totalSpend.toLocaleString()}</strong></td>
                 <td>${escapeHtml(c.lastService)}</td>
                 <td>
-                    ${channelsArr.map(ch => ch === 'whatsapp' ? '<span class="badge-channel wa">WhatsApp</span>' : '<span class="badge-channel web">Web</span>').join(' ')}
+                    ${c.isChurnRisk 
+                        ? `<span class="badge-churn-risk"><i class="fas fa-exclamation-triangle"></i> >30d Inactive</span>` 
+                        : `<span style="font-size: 11px; color: #10b981; font-weight: 700;"><i class="fas fa-check-circle"></i> Active</span>`
+                    }
                 </td>
-                <td>
-                    <a href="${waLink}" target="_blank" class="filter-pill" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #25d366; color: white; border: none; font-size: 12px; padding: 6px 14px;">
-                        <i class="fab fa-whatsapp"></i> Message Client
-                    </a>
+                <td onclick="event.stopPropagation()">
+                    <div style="display: flex; gap: 6px;">
+                        <button class="filter-pill" style="padding: 5px 10px; font-size: 11px;" onclick="openCustomer360('${cleanPhone}')">
+                            <i class="fas fa-user-circle"></i> 360 View
+                        </button>
+                        <a href="${waLink}" target="_blank" class="filter-pill" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background: #25d366; color: white; border: none; font-size: 11px; padding: 5px 10px;">
+                            <i class="fab fa-whatsapp"></i> Chat
+                        </a>
+                    </div>
                 </td>
             </tr>
         `;
@@ -669,12 +890,151 @@ function renderClientsTable() {
     clientsBody.innerHTML = html;
 }
 
+// ------------------------------------------------------------------------------
+// CUSTOMER 360 DRAWER LOGIC (Slide 8 & 9)
+// ------------------------------------------------------------------------------
+window.openCustomer360 = function(phone) {
+    selectedCustomerPhone = phone;
+    const clientsMap = buildCustomer360Profiles();
+    const c = clientsMap[phone];
+    if (!c) return;
+
+    const overlay = document.getElementById('customer360Overlay');
+    if (!overlay) return;
+
+    // Set Header
+    document.getElementById('c360Name').textContent = c.name;
+    document.getElementById('c360Phone').textContent = c.phone;
+    document.getElementById('c360Avatar').textContent = c.name.substring(0, 2).toUpperCase();
+    
+    const stageBadge = document.getElementById('c360StageBadge');
+    stageBadge.className = `stage-badge stage-${c.stage.toLowerCase()}`;
+    stageBadge.textContent = c.stage;
+
+    // Set Key Metrics
+    document.getElementById('c360TotalSpend').textContent = `Rs. ${c.totalSpend.toLocaleString()}`;
+    document.getElementById('c360VisitsCount').textContent = c.visits;
+    
+    const riskEl = document.getElementById('c360RiskStatus');
+    if (c.isChurnRisk) {
+        riskEl.textContent = 'High (>30d)';
+        riskEl.style.color = '#e11d48';
+    } else {
+        riskEl.textContent = 'Low (Active)';
+        riskEl.style.color = '#059669';
+    }
+
+    // Set WhatsApp link
+    let intlPhone = phone.startsWith('0') ? '94' + phone.substring(1) : phone;
+    const waMsg = encodeURIComponent(`Hello ${c.name}! This is the senior concierge team from Chanu Salon. We are delighted to assist with your next beauty experience.`);
+    document.getElementById('c360WaBtn').href = `https://wa.me/${intlPhone}?text=${waMsg}`;
+
+    // Render Timeline
+    const timeline = document.getElementById('c360TimelineList');
+    if (timeline) {
+        if (c.appointments.length === 0) {
+            timeline.innerHTML = `<p style="font-size: 12.5px; color: #94a3b8;">No past interaction records found.</p>`;
+        } else {
+            timeline.innerHTML = c.appointments.map(a => `
+                <div class="c360-history-item">
+                    <div>
+                        <strong style="font-size: 13px; color: #0f172a;">${escapeHtml(a.service || 'Salon Service')}</strong>
+                        <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                            <i class="far fa-calendar-alt"></i> ${escapeHtml(a.bookingDate || '--')} at ${escapeHtml(a.bookingTime || '--')} · 
+                            <span style="text-transform: capitalize;">${escapeHtml(a.channel || 'web')}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <strong style="color: #059669; font-size: 13px;">Rs. ${Number(a.price || 0).toLocaleString()}</strong>
+                        <div><span class="status-badge status-${(a.status || 'pending').toLowerCase()}">${escapeHtml(a.status || 'Pending')}</span></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Render Cases & Special Notes (Slide 9 & 11)
+    renderCustomerCases(phone);
+
+    overlay.style.display = 'flex';
+};
+
+window.closeCustomer360Drawer = function(e) {
+    if (e && e.target && e.target.id !== 'customer360Overlay' && !e.target.classList.contains('c360-close-btn')) return;
+    const overlay = document.getElementById('customer360Overlay');
+    if (overlay) overlay.style.display = 'none';
+};
+
+// Cases / Notes Storage & Renderer
+function renderCustomerCases(phone) {
+    const list = document.getElementById('c360CasesList');
+    if (!list) return;
+
+    const savedCases = JSON.parse(localStorage.getItem(`chanu_cases_${phone}`) || '[]');
+    if (savedCases.length === 0) {
+        list.innerHTML = `<p style="font-size: 12px; color: #94a3b8; font-style: italic;">No specific scalp sensitivities, allergies, or complaint notes recorded for this client yet.</p>`;
+        return;
+    }
+
+    list.innerHTML = savedCases.map((c, i) => `
+        <div class="c360-case-card">
+            <div style="display: flex; justify-content: space-between; font-weight: 700; color: #92400e; margin-bottom: 3px;">
+                <span><i class="fas fa-tag"></i> ${escapeHtml(c.type)}</span>
+                <span style="font-size: 11px; font-weight: 400; color: #b45309;">${new Date(c.date).toLocaleDateString()}</span>
+            </div>
+            <div>${escapeHtml(c.description)}</div>
+        </div>
+    `).join('');
+}
+
+window.openAddCaseModal = function() {
+    if (!selectedCustomerPhone) return;
+    document.getElementById('caseTargetPhone').value = selectedCustomerPhone;
+    document.getElementById('caseDescriptionText').value = '';
+    document.getElementById('addCaseModal').style.display = 'flex';
+};
+
+window.closeAddCaseModal = function() {
+    document.getElementById('addCaseModal').style.display = 'none';
+};
+
+window.handleSaveCustomerCase = async function(e) {
+    e.preventDefault();
+    const phone = document.getElementById('caseTargetPhone').value;
+    const type = document.getElementById('caseTypeSelect').value;
+    const desc = document.getElementById('caseDescriptionText').value.trim();
+    if (!phone || !desc) return;
+
+    // Save locally
+    const cases = JSON.parse(localStorage.getItem(`chanu_cases_${phone}`) || '[]');
+    cases.unshift({
+        type: type,
+        description: desc,
+        date: new Date().toISOString()
+    });
+    localStorage.setItem(`chanu_cases_${phone}`, JSON.stringify(cases));
+
+    // Post to serverless endpoint
+    fetch('/api/case', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, type, description: desc })
+    }).catch(() => {});
+
+    closeAddCaseModal();
+    renderCustomerCases(phone);
+};
+
+// ------------------------------------------------------------------------------
+// CONTROLS & EVENT LISTENERS
+// ------------------------------------------------------------------------------
 window.updateStatus = async function(docId, newStatus) {
     if (!window.salonDB || !window.salonDB.db) return;
     try {
         const { db, doc, updateDoc } = window.salonDB;
         await updateDoc(doc(db, "appointments", docId), {
-            status: newStatus
+            status: newStatus,
+            isEscalated: (newStatus === 'Escalated')
         });
         console.log(`Updated appointment ${docId} to ${newStatus}`);
     } catch (err) {
@@ -684,9 +1044,16 @@ window.updateStatus = async function(docId, newStatus) {
 
 window.setFilter = function(filterName, btn) {
     activeFilter = filterName;
-    document.querySelectorAll('#tabCRM .filter-bar .filter-pill').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#tabCRM .filter-bar:not(#lifecycleFilterBar) .filter-pill').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     renderCRMTable();
+};
+
+window.setLifecycleFilter = function(stageName, btn) {
+    activeLifecycleFilter = stageName;
+    document.querySelectorAll('#lifecycleFilterBar .filter-pill').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderClientsTable();
 };
 
 function escapeHtml(str) {
@@ -699,3 +1066,4 @@ function escapeHtml(str) {
 document.addEventListener('DOMContentLoaded', () => {
     window.checkAdminAuth();
 });
+

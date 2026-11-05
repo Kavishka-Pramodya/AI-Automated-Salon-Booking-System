@@ -63,6 +63,7 @@
                         <button onclick="askPrompt('What are the benefits of your Gold & Diamond facials?')"><i class="fas fa-sparkles" style="color: #e11d48;"></i> Facial treatments?</button>
                         <button onclick="askPrompt('How can I book an appointment slot?')"><i class="far fa-calendar-check" style="color: #e11d48;"></i> How to book a slot?</button>
                         <button onclick="requestCallbackLead()"><i class="fas fa-phone-alt" style="color: #e11d48;"></i> Request VIP Callback / Book</button>
+                        <button onclick="askPrompt('I would like to speak directly with the Salon Director regarding my service.')" style="border-color: #fca5a5; color: #dc2626;"><i class="fas fa-user-shield"></i> Manager Assistance</button>
                     </div>
                 </div>
                 <div class="ai-modal-footer">
@@ -197,18 +198,22 @@ window.sendAIMessage = async function() {
 
         let replyText = "";
         let leadSaved = false;
+        let isEscalated = false;
 
         if (response.ok) {
             const data = await response.json();
             replyText = data.reply || "Thank you for asking! How else may I assist you with your salon experience?";
             leadSaved = data.lead_saved;
+            isEscalated = data.is_escalated;
         } else {
             replyText = "Hello from Chanu Salon! 🌸 Our services include Couture Haircuts (Rs. 1,500), Facials (Rs. 3,000), and Color (Rs. 5,000). You can reserve an exact slot directly on this page or call 070 446 8888!";
         }
 
         typingDiv.classList.remove('typing');
         let formatted = formatChatText(replyText);
-        if (leadSaved) {
+        if (isEscalated) {
+            formatted += `<div style="margin-top: 10px; padding: 8px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 11.5px; color: #991b1b; font-weight: 700;"><i class="fas fa-shield-alt"></i> Priority Hand-Off: Your inquiry has been escalated directly to our Salon Director's CRM console.</div>`;
+        } else if (leadSaved) {
             formatted += `<div style="margin-top: 8px; font-size: 11.5px; color: #059669; font-weight: 700;"><i class="fas fa-check-circle"></i> Your contact has been registered into our Live CRM Lead Stream!</div>`;
         }
         typingDiv.innerHTML = formatted;

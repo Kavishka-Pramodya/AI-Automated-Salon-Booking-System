@@ -98,7 +98,7 @@
                  TAB 1: DASHBOARD OVERVIEW
                  ========================================== -->
             <div id="tabOverview" class="tab-pane active">
-                <!-- 4 KPI Stat Cards -->
+                <!-- KPI Stat Cards (The Business Brain Overview) -->
                 <section class="stats-grid">
                     <div class="stat-card" style="cursor: pointer;" onclick="switchAdminTab('crm')">
                         <div class="stat-label"><i class="fas fa-calendar-day"></i> Today's Appointments</div>
@@ -106,18 +106,18 @@
                     </div>
 
                     <div class="stat-card blue" style="cursor: pointer;" onclick="switchAdminTab('crm')">
-                        <div class="stat-label"><i class="fas fa-calendar-alt"></i> Upcoming Bookings</div>
-                        <div class="stat-val" id="statUpcoming">0</div>
+                        <div class="stat-label"><i class="fas fa-id-card"></i> Customer 360 Profiles (The Memory)</div>
+                        <div class="stat-val" id="statUnifiedClients">0</div>
                     </div>
 
-                    <div class="stat-card gold" style="cursor: pointer;" onclick="switchAdminTab('services')">
-                        <div class="stat-label"><i class="fas fa-magic"></i> Active Salon Services</div>
-                        <div class="stat-val" id="statServicesCount">4 Services</div>
+                    <div class="stat-card green" style="cursor: pointer;" onclick="switchAdminTab('crm')">
+                        <div class="stat-label"><i class="fas fa-heartbeat"></i> Data Health Score (The Senses)</div>
+                        <div class="stat-val" id="statDataHealth">100%</div>
                     </div>
 
-                    <div class="stat-card green" style="cursor: pointer;" onclick="switchAdminTab('users')">
-                        <div class="stat-label"><i class="fas fa-users"></i> Registered Users</div>
-                        <div class="stat-val" id="statUsersCount">0 Users</div>
+                    <div class="stat-card" style="cursor: pointer; border-left: 4px solid #dc2626;" onclick="switchAdminTab('crm')">
+                        <div class="stat-label" style="color: #dc2626;"><i class="fas fa-bell"></i> Urgent Escalations (The Reflexes)</div>
+                        <div class="stat-val" id="statEscalationsCount" style="color: #dc2626;">0</div>
                     </div>
                 </section>
 
@@ -389,15 +389,51 @@
             </div>
 
             <!-- ==========================================
-                 TAB 5: REAL-TIME CLOUD CRM PORTAL
+                 TAB 5: REAL-TIME CLOUD CRM PORTAL (BUSINESS BRAIN)
                  ========================================== -->
             <div id="tabCRM" class="tab-pane">
-                <!-- CRM Top Actions & Filters -->
+                
+                <!-- 1. The Reflexes: Urgent Human Escalation Alert (Slide 23 & 25) -->
+                <div class="escalation-banner" id="escalationAlertBanner" style="display: none;">
+                    <div class="escalation-content">
+                        <div class="escalation-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div>
+                            <div class="escalation-title" id="escalationTitleText">🚨 Urgent: Customer Service Escalation Detected</div>
+                            <div class="escalation-sub" id="escalationSubText">Our AI Concierge flagged a dissatisfied client or manager escalation request requiring immediate human attention.</div>
+                        </div>
+                    </div>
+                    <div id="escalationActionBtns" style="display: flex; gap: 8px;">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+
+                <!-- 2. The Senses: 5 Data Quality Checks & Health Score (Slide 14 & 15) -->
+                <div class="data-health-widget">
+                    <div>
+                        <div style="font-size: 13.5px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-check-double text-pink" style="color: var(--crm-primary);"></i>
+                            <span>The Senses · Data Quality & Health Score</span>
+                            <span class="health-score-badge" id="dataHealthScoreBadge">100% HEALTH</span>
+                        </div>
+                        <p style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                            5 Essential Dataset Checks: <strong>Complete</strong>, <strong>Accurate</strong> (+94 Mobile), <strong>Consistent</strong>, <strong>Timely</strong>, <strong>Unique</strong> (Identity Resolution)
+                        </p>
+                    </div>
+
+                    <div class="health-meter-container">
+                        <div class="health-progress-bg">
+                            <div class="health-progress-bar" id="dataHealthBar" style="width: 100%;"></div>
+                        </div>
+                        <span id="dataHealthQualitySummary" style="font-size: 11.5px; font-weight: 700; color: #059669;">0 Deduplication Issues</span>
+                    </div>
+                </div>
+
+                <!-- 3. Real-Time Omnichannel CRM Stream -->
                 <section class="crm-card" style="margin-bottom: 24px;">
                     <div class="crm-card-header">
                         <div>
-                            <h2><i class="fas fa-stream text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Real-Time Omnichannel CRM Stream</h2>
-                            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Live synchronization across Website slot bookings and WhatsApp Cloud inquiries</p>
+                            <h2><i class="fas fa-stream text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Real-Time Omnichannel Stream (The Memory)</h2>
+                            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Live synchronization across Website slot bookings, AI Chatbot inquiries, and WhatsApp Cloud leads</p>
                         </div>
                         
                         <div class="filter-bar">
@@ -405,6 +441,9 @@
                             <button class="filter-pill" id="crmPillWeb" onclick="setFilter('website', this)"><i class="fas fa-globe"></i> Website</button>
                             <button class="filter-pill" id="crmPillWA" onclick="setFilter('whatsapp', this)"><i class="fab fa-whatsapp"></i> WhatsApp Leads</button>
                             <button class="filter-pill" id="crmPillConf" onclick="setFilter('confirmed', this)">Confirmed Only</button>
+                            <button class="filter-pill" id="crmPillEscalated" onclick="setFilter('escalated', this)" style="color: #dc2626; border-color: #fca5a5;">
+                                <i class="fas fa-bell"></i> Escalations (<span id="escalatedCountBadge">0</span>)
+                            </button>
                         </div>
                     </div>
 
@@ -433,11 +472,26 @@
                     </div>
                 </section>
 
-                <!-- Customer CRM Lifetime Value Directory -->
+                <!-- 4. Customer 360 Lifetime Value & 5-Stage Lifecycle Directory (Slide 8, 10, 16) -->
                 <section class="crm-card">
                     <div class="crm-card-header">
-                        <h2><i class="fas fa-users-crown text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Client Lifetime CRM & Retention Profiles</h2>
-                        <span style="font-size: 13px; color: #64748b;">Consolidated client profiles with 1-Click direct WhatsApp outreach</span>
+                        <div>
+                            <h2><i class="fas fa-id-card-alt text-pink" style="color: var(--crm-primary); margin-right: 8px;"></i> Customer 360 Directory & Lifecycle Retention</h2>
+                            <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Single Customer View (1 Record Per Real Person), Lifecycle Stages & Churn Risk Prediction</p>
+                        </div>
+
+                        <!-- 5 Lifecycle Stage Filters (Slide 10) -->
+                        <div class="filter-bar" id="lifecycleFilterBar">
+                            <button class="filter-pill active" onclick="setLifecycleFilter('all', this)">All Profiles</button>
+                            <button class="filter-pill" onclick="setLifecycleFilter('Lead', this)">01 Leads</button>
+                            <button class="filter-pill" onclick="setLifecycleFilter('Prospect', this)">02 Prospects</button>
+                            <button class="filter-pill" onclick="setLifecycleFilter('Customer', this)">03 Customers</button>
+                            <button class="filter-pill" onclick="setLifecycleFilter('Repeat', this)">04 Repeat</button>
+                            <button class="filter-pill" onclick="setLifecycleFilter('Advocate', this)"><i class="fas fa-crown text-amber-500"></i> 05 VIP Advocates</button>
+                            <button class="filter-pill" onclick="setLifecycleFilter('churn_risk', this)" style="color: #e11d48; border-color: #fecdd3;">
+                                <i class="fas fa-user-clock"></i> Churn Risk (<span id="churnRiskCountBadge">0</span>)
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
@@ -445,19 +499,20 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Client Name</th>
+                                    <th>Customer 360 Profile</th>
                                     <th>Contact Phone</th>
+                                    <th>Lifecycle Stage</th>
                                     <th>Total Visits</th>
                                     <th>Lifetime Spend</th>
-                                    <th>Last Treatment</th>
-                                    <th>Booking Channel</th>
-                                    <th>Direct Outreach</th>
+                                    <th>Last Service</th>
+                                    <th>Churn Risk</th>
+                                    <th>Single View & Outreach</th>
                                 </tr>
                             </thead>
                             <tbody id="clientsTableBody">
                                 <tr>
-                                    <td colspan="8" style="text-align: center; padding: 24px; color: #94a3b8;">
-                                        Compiling client relationship profiles...
+                                    <td colspan="9" style="text-align: center; padding: 24px; color: #94a3b8;">
+                                        Compiling Customer 360 relationship profiles...
                                     </td>
                                 </tr>
                             </tbody>
@@ -465,6 +520,112 @@
                     </div>
                 </section>
             </div>
+
+        </main>
+    </div>
+
+    <!-- =========================================================================
+         CUSTOMER 360 DRAWER / MODAL (Single Customer View - Slide 8 & 9)
+         ========================================================================= -->
+    <div class="c360-drawer-overlay" id="customer360Overlay" onclick="closeCustomer360Drawer(event)">
+        <div class="c360-drawer" onclick="event.stopPropagation()">
+            <div class="c360-header">
+                <button class="c360-close-btn" onclick="closeCustomer360Drawer()" title="Close">&times;</button>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #ec4899, #e11d48); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800;" id="c360Avatar">
+                        NP
+                    </div>
+                    <div>
+                        <h2 style="font-family: var(--font-heading); font-size: 20px; color: white;" id="c360Name">Nadeesha Perera</h2>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                            <code style="background: rgba(255,255,255,0.15); padding: 2px 8px; border-radius: 6px; color: #fbcfe8; font-size: 12px;" id="c360Phone">077 123 4567</code>
+                            <span class="stage-badge stage-customer" id="c360StageBadge">03 Customer</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="c360-body">
+                <!-- 3 Key Metrics -->
+                <div class="c360-metric-grid">
+                    <div class="c360-metric-card">
+                        <div class="num" id="c360TotalSpend">Rs. 0</div>
+                        <div class="lbl">Lifetime Spend</div>
+                    </div>
+                    <div class="c360-metric-card">
+                        <div class="num" id="c360VisitsCount">0</div>
+                        <div class="lbl">Total Appointments</div>
+                    </div>
+                    <div class="c360-metric-card">
+                        <div class="num" id="c360RiskStatus">Low</div>
+                        <div class="lbl">Churn Risk</div>
+                    </div>
+                </div>
+
+                <!-- Quick Outreach & Case Action Buttons -->
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="#" id="c360WaBtn" target="_blank" class="btn-save-form" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; background: #25d366;">
+                        <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+                    </a>
+                    <button class="btn-add-case" onclick="openAddCaseModal()">
+                        <i class="fas fa-plus"></i> Add Note / Case
+                    </button>
+                </div>
+
+                <!-- Cases & Special Preferences Section (Slide 9 & 11) -->
+                <div>
+                    <div class="c360-section-title">
+                        <span><i class="fas fa-folder-open text-pink"></i> Customer Cases, Preferences & Notes</span>
+                    </div>
+                    <div id="c360CasesList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Interaction & Appointment History Timeline -->
+                <div>
+                    <div class="c360-section-title">
+                        <span><i class="fas fa-history text-pink"></i> Interaction & Appointment History</span>
+                    </div>
+                    <div id="c360TimelineList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Case / Preference Note -->
+    <div class="auth-overlay" id="addCaseModal" style="display: none;">
+        <div class="auth-card" style="max-width: 480px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-family: var(--font-heading); font-size: 18px;"><i class="fas fa-notes-medical text-pink" style="color: var(--crm-primary);"></i> Add Client Case / Preference</h3>
+                <button type="button" onclick="closeAddCaseModal()" style="border: none; background: none; font-size: 18px; cursor: pointer;">&times;</button>
+            </div>
+            <p style="font-size: 12.5px; color: #64748b; margin-bottom: 16px;">Log styling preferences, allergies, special requests, or complaint resolutions directly to this Customer 360 profile.</p>
+            
+            <form onsubmit="handleSaveCustomerCase(event)">
+                <input type="hidden" id="caseTargetPhone" value="">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; font-weight: 700; color: #475569;">Case Type</label>
+                    <select id="caseTypeSelect" class="form-select" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        <option value="Preference">Client Styling Preference</option>
+                        <option value="Allergy">Allergy / Scalp Sensitivity</option>
+                        <option value="Special Request">Special Request / VIP</option>
+                        <option value="Complaint">Complaint / Resolution Note</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 12px; font-weight: 700; color: #475569;">Description / Notes</label>
+                    <textarea id="caseDescriptionText" class="form-input" rows="3" placeholder="e.g. Sensitive to ammonia bleach. Prefers morning appointments with Senior Stylist." required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit;"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn-edit-row" onclick="closeAddCaseModal()">Cancel</button>
+                    <button type="submit" class="btn-save-form" style="padding: 10px 18px; font-size: 13px;">Save Case to Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
         </main>
     </div>
