@@ -33,7 +33,6 @@
         </nav>
 
         <div class="auth-buttons" id="navAuthContainer">
-            <a href="admin.html" class="btn-crm-link"><i class="fas fa-crown"></i> Admin CRM</a>
             <a href="login.html" class="btn-login"><i class="far fa-user"></i> Login</a>
             <a href="register.html" class="btn-signup"><i class="fas fa-sparkles"></i> Sign Up</a>
         </div>
@@ -375,7 +374,6 @@
             if (user && user.role === 'client') {
                 if (nav) {
                     nav.innerHTML = `
-                        <a href="admin.html" class="btn-crm-link"><i class="fas fa-crown"></i> Admin CRM</a>
                         <div class="user-profile-badge">
                             <div class="user-avatar-mini">${user.fullName ? user.fullName[0].toUpperCase() : 'C'}</div>
                             <div class="user-info-mini">
@@ -404,7 +402,6 @@
             } else {
                 if (nav) {
                     nav.innerHTML = `
-                        <a href="admin.html" class="btn-crm-link"><i class="fas fa-crown"></i> Admin CRM</a>
                         <a href="login.html" class="btn-login"><i class="far fa-user"></i> Login</a>
                         <a href="register.html" class="btn-signup"><i class="fas fa-sparkles"></i> Sign Up</a>
                     `;
