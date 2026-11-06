@@ -271,7 +271,7 @@ window.renderAdminUsersTable = function() {
         const isAdmin = (u.role === 'Admin');
         const roleBadge = isAdmin
             ? `<span class="role-tag admin"><i class="fas fa-crown"></i> Admin / Staff</span>`
-            : `<span class="role-tag client"><i class="fas fa-gem"></i> VIP Client</span>`;
+            : `<span class="role-tag client"><i class="fas fa-user"></i> Client</span>`;
 
         const joinedStr = u.registeredAt ? u.registeredAt.split('T')[0] : '2025-01-01';
 
