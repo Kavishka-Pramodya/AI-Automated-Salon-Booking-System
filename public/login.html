@@ -45,9 +45,12 @@
             <!-- Password -->
             <div class="auth-group">
                 <label for="loginPassword"><i class="fas fa-lock"></i> Password</label>
-                <div class="auth-input-wrapper">
+                <div class="auth-input-wrapper has-toggle">
                     <i class="fas fa-lock input-icon"></i>
                     <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password">
+                    <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('loginPassword', this)" title="Show password" aria-label="Toggle password visibility">
+                        <i class="far fa-eye"></i>
+                    </button>
                 </div>
             </div>
 
@@ -101,6 +104,23 @@
             }
         }
         initDefaultUsers();
+
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            const icon = btn.querySelector('i');
+            if (icon) {
+                if (isPassword) {
+                    icon.className = 'far fa-eye-slash';
+                    btn.title = "Hide password";
+                } else {
+                    icon.className = 'far fa-eye';
+                    btn.title = "Show password";
+                }
+            }
+        }
 
         function fillAdminDemo() {
             document.getElementById('loginUsername').value = 'admin';
