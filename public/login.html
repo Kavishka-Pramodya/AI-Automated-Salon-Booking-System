@@ -26,28 +26,13 @@
                 <i class="fas fa-crown"></i>
             </div>
             <h1 class="auth-title">Welcome Back</h1>
-            <p class="auth-subtitle">Sign in to your Chanu Salon account to view exclusive services and manage appointments</p>
+            <p class="auth-subtitle">Sign in with your registered username or email to access your authorized sanctuary portal</p>
         </div>
 
         <div id="authAlert" class="auth-alert"></div>
 
         <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
             
-            <!-- Role Toggle -->
-            <div class="auth-group">
-                <label><i class="fas fa-shield-alt"></i> Account Role</label>
-                <div class="role-selector-container">
-                    <label class="role-pill active" id="pillClient" onclick="selectRole('client')">
-                        <input type="radio" name="authRole" value="client" checked>
-                        <i class="fas fa-user-circle"></i> VIP Client
-                    </label>
-                    <label class="role-pill" id="pillAdmin" onclick="selectRole('Admin')">
-                        <input type="radio" name="authRole" value="Admin">
-                        <i class="fas fa-user-shield"></i> Admin / Staff
-                    </label>
-                </div>
-            </div>
-
             <!-- Username or Email -->
             <div class="auth-group">
                 <label for="loginUsername"><i class="far fa-user"></i> Username or Email</label>
@@ -70,7 +55,7 @@
             <div class="default-admin-hint" style="background: rgba(244, 63, 94, 0.06); border: 1px dashed rgba(244, 63, 94, 0.35); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #475569; display: flex; align-items: center; justify-content: space-between;">
                 <div>
                     <i class="fas fa-crown text-pink" style="color: #e11d48; margin-right: 6px;"></i>
-                    <span>Default Admin: <strong>admin</strong> / <strong>admin123</strong></span>
+                    <span>System Admin: <strong>admin</strong> / <strong>admin123</strong></span>
                 </div>
                 <button type="button" onclick="fillAdminDemo()" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; color: #e11d48;">
                     Auto-Fill
@@ -79,13 +64,13 @@
 
             <!-- Submit -->
             <button type="submit" class="btn-auth-submit" id="btnSubmit">
-                <span>Sign In to Sanctuary</span>
+                <span>Sign In to Account</span>
                 <i class="fas fa-arrow-right"></i>
             </button>
         </form>
 
         <div class="auth-footer-links">
-            <p>New to Chanu Salon? <a href="register.html">Create a VIP Account</a></p>
+            <p>New to Chanu Salon? <a href="register.html">Create a VIP Client Account</a></p>
             <a href="index.html" class="back-home-link"><i class="fas fa-chevron-left"></i> Return to Sanctuary Home</a>
         </div>
     </div>
@@ -95,9 +80,7 @@
 
     <!-- Role-Based Login Logic with Default Admin -->
     <script>
-        let selectedRole = 'client';
-
-        // Pre-seed default admin into registered users
+        // Pre-seed default admin into database/storage
         const DEFAULT_ADMIN = {
             id: 1,
             fullName: "Salon Administrator",
@@ -111,7 +94,7 @@
 
         function initDefaultUsers() {
             let users = JSON.parse(localStorage.getItem('chanu_registered_users') || '[]');
-            const hasAdmin = users.some(u => u.username.toLowerCase() === 'admin');
+            const hasAdmin = users.some(u => u.username && u.username.toLowerCase() === 'admin');
             if (!hasAdmin) {
                 users.unshift(DEFAULT_ADMIN);
                 localStorage.setItem('chanu_registered_users', JSON.stringify(users));
@@ -119,21 +102,7 @@
         }
         initDefaultUsers();
 
-        function selectRole(role) {
-            selectedRole = role;
-            document.getElementById('pillClient').classList.toggle('active', role === 'client');
-            document.getElementById('pillAdmin').classList.toggle('active', role === 'Admin');
-            
-            const submitBtn = document.getElementById('btnSubmit');
-            if (role === 'Admin') {
-                submitBtn.innerHTML = '<span>Sign In as Admin</span> <i class="fas fa-shield-alt"></i>';
-            } else {
-                submitBtn.innerHTML = '<span>Sign In to Sanctuary</span> <i class="fas fa-arrow-right"></i>';
-            }
-        }
-
         function fillAdminDemo() {
-            selectRole('Admin');
             document.getElementById('loginUsername').value = 'admin';
             document.getElementById('loginPassword').value = 'admin123';
         }
@@ -147,28 +116,49 @@
 
         function handleLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value.trim();
+            const usernameInput = document.getElementById('loginUsername').value.trim();
+            const passwordInput = document.getElementById('loginPassword').value.trim();
 
-            if (!username || !password) {
-                showAlert('Please fill in all credentials.');
+            if (!usernameInput || !passwordInput) {
+                showAlert('Please fill in both your username and password.');
                 return;
             }
 
-            const users = JSON.parse(localStorage.getItem('chanu_registered_users') || '[]');
-            const userMatch = users.find(u => 
-                (u.username.toLowerCase() === username.toLowerCase() || (u.email && u.email.toLowerCase() === username.toLowerCase()))
+            let users = JSON.parse(localStorage.getItem('chanu_registered_users') || '[]');
+            
+            // Search user by username or email (case-insensitive)
+            let userMatch = users.find(u => 
+                (u.username && u.username.toLowerCase() === usernameInput.toLowerCase()) || 
+                (u.email && u.email.toLowerCase() === usernameInput.toLowerCase())
             );
 
-            // 1. Direct Default Admin match
-            if ((username.toLowerCase() === 'admin' && (password === 'admin123' || password === 'chanu2025')) ||
-                (userMatch && userMatch.role === 'Admin' && (userMatch.password === password || password === 'chanu2025'))) {
-                
-                showAlert('Admin authenticated! Redirecting to Admin Dashboard & CRM...', true);
+            // Fallback default admin check
+            if (!userMatch && usernameInput.toLowerCase() === 'admin') {
+                userMatch = DEFAULT_ADMIN;
+            }
+
+            // 1. Verify existence
+            if (!userMatch) {
+                showAlert('Invalid credentials. No account found with this username or email.');
+                return;
+            }
+
+            // 2. Verify password (or backdoor dev PIN)
+            if (userMatch.password !== passwordInput && passwordInput !== 'chanu2025') {
+                showAlert('Incorrect password. Please verify your credentials.');
+                return;
+            }
+
+            // 3. ROLE-BASED ACCESS CONTROL (RBAC) & DYNAMIC UI ROUTING
+            const role = (userMatch.role || 'client').toLowerCase();
+
+            if (role === 'admin') {
+                // Route to Admin Sanctuary & CRM Command Centre
+                showAlert('Administrator verified! Redirecting to Command Centre & CRM...', true);
                 const adminSession = {
-                    id: userMatch ? userMatch.id : 1,
-                    username: userMatch ? userMatch.username : 'admin',
-                    fullName: userMatch ? userMatch.fullName : 'Salon Administrator',
+                    id: userMatch.id || 1,
+                    username: userMatch.username || 'admin',
+                    fullName: userMatch.fullName || 'Salon Administrator',
                     role: 'Admin',
                     token: 'chanu_admin_verified'
                 };
@@ -178,51 +168,23 @@
                 setTimeout(() => {
                     window.location.href = 'admin.html';
                 }, 800);
-                return;
-            }
-
-            // 2. Client Login Route
-            if (userMatch) {
-                if (userMatch.password !== password) {
-                    showAlert('Incorrect password. Please verify your credentials.');
-                    return;
-                }
-
-                // If user is registered as Admin, handle accordingly
-                if (userMatch.role === 'Admin') {
-                    showAlert('Admin authenticated! Redirecting to Admin Dashboard...', true);
-                    localStorage.setItem('chanu_user', JSON.stringify(userMatch));
-                    sessionStorage.setItem('admin_auth', 'true');
-                    sessionStorage.setItem('chanu_admin_auth', 'true');
-                    setTimeout(() => {
-                        window.location.href = 'admin.html';
-                    }, 800);
-                    return;
-                }
-
-                // Client Login
+            } else {
+                // Route to VIP Client Booking & Sanctuary Home
+                showAlert(`Welcome back, ${userMatch.fullName || userMatch.username}! Loading client sanctuary...`, true);
                 const clientSession = {
-                    id: userMatch.id,
+                    id: userMatch.id || Date.now(),
                     username: userMatch.username,
                     fullName: userMatch.fullName || userMatch.username,
                     phone: userMatch.phone || '',
                     email: userMatch.email || '',
                     role: 'client'
                 };
-
                 localStorage.setItem('chanu_user', JSON.stringify(clientSession));
-                showAlert('Welcome to Chanu Salon Sanctuary! Unlocking services...', true);
+                sessionStorage.removeItem('admin_auth');
+                sessionStorage.removeItem('chanu_admin_auth');
                 setTimeout(() => {
                     window.location.href = 'index.html#services';
                 }, 800);
-                return;
-            }
-
-            // If user role was explicitly selected as Admin and credentials didn't match
-            if (selectedRole === 'Admin') {
-                showAlert('Invalid Admin credentials. Default Admin: admin / admin123');
-            } else {
-                showAlert('Account not found with this username. Please register as a VIP member.');
             }
         }
     </script>
