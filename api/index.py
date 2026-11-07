@@ -402,6 +402,14 @@ def handle_chat():
             user_phone = phone_match.group(1)
             is_lead = True
 
+    # Smart customer name extraction from message if not authenticated
+    if user_name in ["Website Visitor", "Valued Client", ""] and message:
+        clean_name = re.sub(r'(07\d{8}|\+94\d{9}|011\d{7})', '', message)
+        clean_name = re.sub(r'(?i)\b(and|mage|nama|name|is|phone|number|whatsapp|mata|slot|ekak|booking|ona|help|please|call|me|adha|ude|hawasa)\b', '', clean_name)
+        clean_name = re.sub(r'[^a-zA-Z\s]', '', clean_name).strip()
+        if len(clean_name) >= 3 and len(clean_name.split()) <= 4:
+            user_name = clean_name.title()
+
     # 2. Check for Reflex Human Escalation Trigger
     is_escalated, escalation_reason = detect_escalation(message)
 
