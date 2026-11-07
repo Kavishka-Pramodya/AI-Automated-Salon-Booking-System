@@ -54,17 +54,6 @@
                 </div>
             </div>
 
-            <!-- Default Admin Quick Hint -->
-            <div class="default-admin-hint" style="background: rgba(244, 63, 94, 0.06); border: 1px dashed rgba(244, 63, 94, 0.35); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #475569; display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <i class="fas fa-crown text-pink" style="color: #e11d48; margin-right: 6px;"></i>
-                    <span>System Admin: <strong>admin</strong> / <strong>admin123</strong></span>
-                </div>
-                <button type="button" onclick="fillAdminDemo()" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; color: #e11d48;">
-                    Auto-Fill
-                </button>
-            </div>
-
             <!-- Submit -->
             <button type="submit" class="btn-auth-submit" id="btnSubmit">
                 <span>Sign In to Account</span>
@@ -122,10 +111,6 @@
             }
         }
 
-        function fillAdminDemo() {
-            document.getElementById('loginUsername').value = 'admin';
-            document.getElementById('loginPassword').value = 'admin123';
-        }
 
         function showAlert(msg, isSuccess = false) {
             const alertBox = document.getElementById('authAlert');
