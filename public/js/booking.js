@@ -109,8 +109,48 @@ async function loadAvailableSlots() {
             const snap = await getDocs(q);
             snap.forEach(doc => {
                 const data = doc.data();
-                if (data.status !== "Cancelled" && data.bookingTime) {
-                    bookedTimes.add(data.bookingTime);
+                if (data.status !== "Cancelled" && (data.bookingTime || data.requestedSlot)) {
+                    const startSlot = data.requestedSlot || data.bookingTime;
+                    bookedTimes.add(startSlot);
+
+                    // Duration span calculation for web chips
+                    let dur = parseInt(data.duration || '30', 10);
+                    if (!dur || dur <= 30) {
+                        const sName = (data.service || '').toLowerCase();
+                        if (sName.includes('bridal')) dur = 180;
+                        else if (sName.includes('keratin') || sName.includes('botox')) dur = 120;
+                        else if (sName.includes('color') || sName.includes('balayage')) dur = 90;
+                        else if (sName.includes('facial')) dur = 60;
+                        else dur = 45;
+                    }
+
+                    if (dur > 30) {
+                        const m = startSlot.match(/(\d{1,2})[:.](\d{2})\s*(AM|PM)?/i);
+                        if (m) {
+                            let h = parseInt(m[1], 10);
+                            const min = parseInt(m[2], 10);
+                            const ampm = (m[3] || '').toUpperCase();
+                            if (ampm === 'PM' && h < 12) h += 12;
+                            if (ampm === 'AM' && h === 12) h = 0;
+                            const startMins = h * 60 + min;
+                            const endMins = startMins + dur;
+
+                            SLOTS_LIST.forEach(slot => {
+                                const sm = slot.match(/(\d{1,2})[:.](\d{2})\s*(AM|PM)?/i);
+                                if (sm) {
+                                    let sh = parseInt(sm[1], 10);
+                                    const smin = parseInt(sm[2], 10);
+                                    const sampm = (sm[3] || '').toUpperCase();
+                                    if (sampm === 'PM' && sh < 12) sh += 12;
+                                    if (sampm === 'AM' && sh === 12) sh = 0;
+                                    const slotMins = sh * 60 + smin;
+                                    if (slotMins >= startMins && slotMins < endMins) {
+                                        bookedTimes.add(slot);
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }
             });
         } catch (err) {
