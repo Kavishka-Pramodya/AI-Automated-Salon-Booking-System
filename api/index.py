@@ -21,14 +21,20 @@ FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY", "")
 
 # ==============================================================================
 # SALESFORCE AGENTFORCE-INSPIRED SYSTEM PROMPT (THE REFLEXES & GROUNDING)
-# 1. Job: Autonomous Luxury Beauty Concierge & Appointment Coordinator
-# 2. Knowledge: Live Chanu Salon services, pricing, schedule & guidelines
-# 3. Actions: Slot booking, inquiry capture, pricing guidance, escalation hand-off
-# 4. Guardrails: No fabricated slots, no arbitrary discounts, zero data leaks
-# 5. Hand-off: Automatic escalation to salon manager if dissatisfied or angry
+# Multi-Language: Fluent English, Sinhala (සිංහල), and Singlish
 # ==============================================================================
 
 SALON_AGENT_PROMPT = """You are 'Anya', the autonomous AI Beauty Concierge & Client Relationship Agent for Chanu Salon - Premier Luxury Hair & Beauty Sanctuary located in Kuliyapitiya, Sri Lanka.
+
+[CRITICAL MULTILINGUAL INSTRUCTION]
+You MUST automatically detect and mirror the language and dialect of the client:
+1. If the client asks in Sinhala (Unicode, e.g., 'කොණ්ඩේ කපන්න කීයද?', 'මට වෙලාවක් වෙන් කරගන්න පුළුවන්ද?'):
+   -> Respond in fluent, polite, grammatically correct Sinhala (සිංහල).
+2. If the client asks in Singlish (e.g., 'oyt sinhalen answer denn puluwnda?', 'hair cut ekata kiyak yanawada?', 'slot ekak danna puluwanda?'):
+   -> Respond warmly in fluent Sinhala or Singlish matching their tone (e.g., 'ඔව්, මට සිංහලෙන් සහ Singlish වලින් උත්තර දෙන්න පුළුවන්!').
+3. If the client asks in English:
+   -> Respond in warm, luxurious, hospitable English.
+NEVER default to English when the client addresses you in Sinhala or Singlish!
 
 [JOB]
 Your mission is to welcome clients warmly, recommend tailored hair, skin, and bridal treatments, provide transparent pricing, assist with smart slot bookings, and resolve customer inquiries with grace.
@@ -55,16 +61,14 @@ Your mission is to welcome clients warmly, recommend tailored hair, skin, and br
 - If unsure about specific medical skin conditions, advise booking a physical consultation with our senior stylist.
 
 [HUMAN HAND-OFF (ESCALATION)]
-- If the client expresses frustration, reports a bad experience, requests a refund, or asks to speak with the manager, respond with genuine empathy, reassure them, and explain that you are escalating this directly to our Salon Director for immediate personal attention.
-
-[TONE & LANGUAGE]
-- Luxurious, warm, polite, and encouraging.
-- Fluently reply in English, Sinhala, or Singlish matching the client's language.
+- If the client expresses frustration, reports a bad experience, requests a refund, or asks to speak with the manager, respond with genuine empathy, reassure them in their language, and explain that you are escalating this directly to our Salon Director for immediate personal attention.
 """
 
 WHATSAPP_AGENT_PROMPT = """You are 'Anya', the autonomous WhatsApp AI Agent for Chanu Salon in Kuliyapitiya, Sri Lanka.
 Hotline / WhatsApp: 070 446 8888.
 Open Mon-Sat 9AM-6PM.
+
+Language: Fluently reply in the customer's language (Sinhala, Singlish, or English).
 Services:
 1. Haircut: from Rs. 1,500
 2. Facial: from Rs. 3,000
@@ -74,13 +78,13 @@ Services:
 
 Rules:
 - Format replies with elegant emojis, bold text (*like this*), and concise bullet points.
-- If a customer is unhappy or requests a refund, express empathy and state that the Salon Manager has been alerted to call them.
-- Always offer to confirm a 30-minute slot or call reception.
+- If customer asks in Sinhala or Singlish, reply warmly in Sinhala/Singlish.
+- If customer is unhappy, express empathy and state that the Salon Manager has been alerted to call them.
+- Always offer to confirm a 30-minute slot or call reception at 070 446 8888.
 """
 
 # ==============================================================================
-# DATA QUALITY UTILITIES (THE SENSES - 5 QUALITY CHECKS)
-# Complete, Accurate, Consistent, Timely, Unique
+# DATA QUALITY UTILITIES & LANGUAGE DETECTION
 # ==============================================================================
 
 def normalize_phone(raw_phone):
@@ -95,12 +99,28 @@ def normalize_phone(raw_phone):
     return digits
 
 def is_valid_sl_phone(phone):
-    """Validates if phone is a valid Sri Lankan mobile number."""
     clean = normalize_phone(phone)
     return bool(re.match(r'^07[0-9]{8}$', clean))
 
+def is_sinhala_or_singlish(text):
+    """Detects if message is in Sinhala Unicode or Singlish phonetics."""
+    if not text:
+        return False
+    # 1. Sinhala Unicode characters
+    if re.search(r'[\u0D80-\u0DFF]', text):
+        return True
+    # 2. Common Singlish phonetics
+    singlish_keywords = [
+        "sinhalen", "sinhala", "puluwanda", "puluwan", "oyt", "oya", "mata", "kiyada", "ganan", 
+        "kohomada", "welawe", "karanna", "denn", "ona", "danna", "enne", "thiyenawada", 
+        "thiyenne", "sathiye", "kapanne", "konde", "awul", "katha", "hondayi", "hari", 
+        "mokakda", "kawadda", "dapanko", "ahanna", "kiyapan", "salli", "ganne", "balanna"
+    ]
+    text_lower = text.lower()
+    return any(w in text_lower for w in singlish_keywords)
+
 def detect_escalation(text):
-    """Detects negative sentiment or human escalation triggers (Agentforce Reflexes)."""
+    """Detects negative sentiment or human escalation triggers in EN, SI, Singlish."""
     if not text:
         return False, ""
     text_lower = text.lower()
@@ -109,7 +129,8 @@ def detect_escalation(text):
         "refund", "cheated", "speak with manager", "talk to manager", "call manager", 
         "director", "disappointed", "poor experience", "damaged my hair", 
         "horrible", "waste of money", "call me immediately", "sathiyak giya", 
-        "katha karanna ona", "naduwak", "palaweni wathawa nemei"
+        "katha karanna ona", "naduwak", "palaweni wathawa nemei", "salli ona", 
+        "manager ekka katha", "waradi", "awul", "salli apahu"
     ]
     for kw in escalation_keywords:
         if kw in text_lower:
@@ -117,18 +138,25 @@ def detect_escalation(text):
     return False, ""
 
 def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT):
+    """Queries Google Gemini API with active 2026 models and automatic fallback."""
     if not GEMINI_API_KEY:
         return None
-    models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+
+    # Priority list of verified, active 2026 Gemini models
+    models = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"]
+    
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
         payload = {
             "system_instruction": {"parts": [{"text": prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_msg}]}],
-            "generationConfig": {"temperature": 0.65, "maxOutputTokens": 800}
+            "generationConfig": {
+                "temperature": 0.65, 
+                "maxOutputTokens": 600
+            }
         }
         try:
-            resp = requests.post(url, json=payload, timeout=10)
+            resp = requests.post(url, json=payload, timeout=8)
             if resp.status_code == 200:
                 data = resp.json()
                 candidates = data.get("candidates", [])
@@ -144,7 +172,6 @@ def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT):
 
 # ==============================================================================
 # FIRESTORE INTEGRATION (THE MEMORY: 5 ENTITIES & LIFECYCLE STAGES)
-# Person, Interaction, Order/Booking, Case, Organisation
 # ==============================================================================
 
 def save_lead_to_firestore(channel, customer_name, customer_phone, service, inquiry_text, price=0, is_escalated=False, escalation_reason="", stage="Lead"):
@@ -155,7 +182,6 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
     now = datetime.now()
     url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/appointments?key={FIREBASE_API_KEY}"
     
-    # Calculate Data Quality Flags (The Senses)
     data_quality_score = 100
     if not is_valid_sl_phone(clean_phone):
         data_quality_score -= 30
@@ -176,7 +202,7 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
             "bookingTime": {"stringValue": now.strftime("%H:%M")},
             "price": {"integerValue": str(int(price or 0))},
             "status": {"stringValue": initial_status},
-            "stage": {"stringValue": str(stage)}, # 01 Lead, 02 Prospect, 03 Customer, 04 Repeat, 05 Advocate
+            "stage": {"stringValue": str(stage)},
             "duration": {"integerValue": "30"},
             "inquiry": {"stringValue": str(inquiry_text or "")},
             "isEscalated": {"booleanValue": bool(is_escalated)},
@@ -192,6 +218,59 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
     except Exception as e:
         print(f"Error saving lead to Firestore: {e}")
         return False
+
+# ==============================================================================
+# INTELLIGENT MULTILINGUAL FALLBACK ENGINE (Sinhala, Singlish & English)
+# ==============================================================================
+
+def get_multilingual_fallback(message, is_escalated=False):
+    msg_lower = message.lower()
+    is_si = is_sinhala_or_singlish(message)
+
+    if is_escalated:
+        if is_si:
+            return "සිදුවූ අපහසුතාවයට අපගේ බලවත් කනගාටුව ප්‍රකාශ කරමු! 🌸 මෙම ගැටලුව මම අපගේ CRM එකෙහි 'Urgent Case' එකක් ලෙස සටහන් කර චානු සැලෝන් අධ්‍යක්ෂකතුමියට (Salon Director) වෙත යොමු කළා. අපගේ කළමනාකාරීත්වය ඉක්මනින්ම ඔබව අමතා මෙය විසඳනු ඇත."
+        return "I sincerely apologize for any inconvenience caused. 🌸 I have prioritized this as an Urgent Case in our CRM and notified our Salon Director directly. Our management will contact you promptly to ensure this is made right."
+
+    # 1. User asks about language / speaking in Sinhala
+    if any(k in msg_lower for k in ["sinhalen", "sinhala", "සිංහල", "language", "bahawe", "katha"]):
+        return "ඔව්, අනිවාර්යයෙන්ම මට සිංහලෙන් සහ Singlish වලින් කතා කරන්න පුළුවන්! 🌸 චානු සැලෝන් (Chanu Salon) එකේ Hair cutting, Facials, Hair color, Bridal dressing හෝ Slot booking ගැන ඕනෑම දෙයක් අහන්න. මම ඔබට කොහොමද උදව් කරන්නේ? ✨"
+
+    # 2. Haircut inquiries
+    if any(k in msg_lower for k in ["hair", "cut", "konde", "kapanne", "styling", "කොණ්ඩ"]):
+        if is_si:
+            return "✂️ අපගේ Couture Hair Cutting & Styling ආරම්භ වන්නේ රු. 1,500 සිටයි (විනාඩි 45ක් පමණ). ඔබට මෙම වෙබ් පිටුවේ 'Book Slot' කොටසෙන් කැමති වේලාවකට Slot එකක් පහසුවෙන්ම වෙන් කරගත හැක!"
+        return "✨ Our Couture Hair Cutting & Styling starts from Rs. 1,500 (approx. 45 mins). You can reserve an exact slot directly on this page!"
+
+    # 3. Facial inquiries
+    if any(k in msg_lower for k in ["facial", "skin", "clean", "ෆේෂල්", "මූණ"]):
+        if is_si:
+            return "🌸 අපගේ Botanical Gold & Diamond Facials රු. 3,000 සිට ආරම්භ වේ (විනාඩි 60ක්). ගැඹුරු සමේ පැහැපත් බව සහ පෝෂණය සඳහා මෙය කදිමයි! ඔබට Slot එකක් වෙන්කර දීමට මට පුළුවන්ද?"
+        return "🌸 Our Botanical Gold & Diamond Facials start at Rs. 3,000 for 60 mins of deep cellular glow and relaxation."
+
+    # 4. Pricing / Rates inquiries
+    if any(k in msg_lower for k in ["price", "rate", "kiyada", "ganan", "mila", "මිල", "ගණන්", "cost", "charge"]):
+        if is_si:
+            return "💎 චානු සැලෝන් (Chanu Salon) සේවා ගාස්තු:\n• Haircut & Styling: රු. 1,500 සිට\n• Botanical Facials: රු. 3,000 සිට\n• Creative Hair Color: රු. 5,000 සිට\n• Keratin & Hair Botox: රු. 7,500 සිට\n• Bridal Package: රු. 15,000 සිට"
+        return "💎 Chanu Salon Service Rates:\n• Haircut: Rs. 1,500+\n• Facial: Rs. 3,000+\n• Hair Color: Rs. 5,000+\n• Keratin Therapy: Rs. 7,500+\n• Bridal Package: Rs. 15,000+"
+
+    # 5. Booking / Appointment inquiries
+    if any(k in msg_lower for k in ["book", "slot", "welawe", "appointment", "reserve", "වෙන්"]):
+        if is_si:
+            return "📅 ඔබට මෙම පිටුවේ ඇති 'Book Slot' පෝරමය මඟින් කැමති දිනයක් සහ වේලාවක් තෝරාගෙන Slot එකක් Book කරගත හැක. නැතහොත් දුරකථන අංකය මෙහි සඳහන් කරන්න, අපගේ reception team එක ඔබව සම්බන්ධ කරගනීවි!"
+        return "📅 You can easily book an appointment slot using the 'Book Slot' form right on this page! Or leave your contact number and our reception will confirm your slot."
+
+    # 6. Operating Hours inquiries
+    if any(k in msg_lower for k in ["hour", "open", "time", "dina", "ඇරලා", "වෙලාව"]):
+        if is_si:
+            return "🕒 අපි සඳුදා සිට සෙනසුරාදා දක්වා උදෑසන 9:00 සිට සවස 6:00 දක්වා විවෘතයි (ප්‍රධාන වීදිය, කුලියාපිටිය). ඉරිදා දිනයන්හි Bridal appointment සඳහා පමණක් විවෘත වේ."
+        return "🕒 We are open Monday to Saturday from 9:00 AM to 6:00 PM in Kuliyapitiya."
+
+    # 7. Default greeting & guidance
+    if is_si:
+        return "චානු සැලෝන් වෙත සාදරයෙන් පිළිගනිමු! 🌸 මම Anya, ඔබේ Smart Beauty Concierge. කොණ්ඩය කැපීම, Facials, Hair Treatments හෝ Booking එකක් දැමීම ගැන ඔබට දැනගැනීමට අවශ්‍ය කුමක්ද? ඔබට උදව් කිරීමට මම සූදානම්! ✨"
+    
+    return "Thank you for reaching out to Chanu Salon! 💖 Would you like to schedule an appointment, or speak directly with our reception at 070 446 8888?"
 
 # ==============================================================================
 # API ROUTE HANDLERS
@@ -217,7 +296,7 @@ def handle_chat():
     is_lead = req_data.get("is_lead", False)
 
     if not message:
-        return jsonify({"reply": "Hello gorgeous! ✨ How can I assist you with your salon booking or beauty inquiries today?"})
+        return jsonify({"reply": "Hello gorgeous! ✨ How can I assist you with your salon booking or beauty inquiries today? (මට සිංහලෙන්ද උදව් කළ හැක!)"})
 
     # 1. Check for phone number pattern in message if not provided
     if not user_phone:
@@ -226,11 +305,11 @@ def handle_chat():
             user_phone = phone_match.group(1)
             is_lead = True
 
-    # 2. Check for Reflex Human Escalation Trigger (Slide 23 & 25)
+    # 2. Check for Reflex Human Escalation Trigger
     is_escalated, escalation_reason = detect_escalation(message)
 
     # 3. Detect Stage: If booking request -> Prospect; If complaint -> Case/Escalation; Else -> Lead
-    stage = "Prospect" if ("book" in message.lower() or "slot" in message.lower()) else "Lead"
+    stage = "Prospect" if ("book" in message.lower() or "slot" in message.lower() or "welawe" in message.lower()) else "Lead"
 
     # If contact available or escalation triggered, save directly to Firestore
     lead_saved = False
@@ -246,23 +325,10 @@ def handle_chat():
             stage=stage
         )
 
-    # 4. Generate Grounded AI Response
+    # 4. Generate Grounded AI Response (Gemini API with fallback)
     ai_reply = query_gemini(message, SALON_AGENT_PROMPT)
     if not ai_reply:
-        if is_escalated:
-            ai_reply = "I sincerely apologize for any inconvenience caused. 🌸 I have prioritized this as an Urgent Case in our CRM and notified our Salon Director directly. Our management will contact you promptly to ensure this is made right."
-        else:
-            msg_lower = message.lower()
-            if "hair" in msg_lower or "cut" in msg_lower:
-                ai_reply = "✨ Our Couture Hair Cutting & Styling starts from Rs. 1,500 (approx. 45 mins). You can reserve an exact slot directly on this page!"
-            elif "facial" in msg_lower or "skin" in msg_lower:
-                ai_reply = "🌸 Our Botanical Gold & Diamond Facials start at Rs. 3,000 for 60 mins of deep cellular glow and relaxation."
-            elif "price" in msg_lower or "rate" in msg_lower:
-                ai_reply = "💎 Service Rates:\n• Haircut: Rs. 1,500+\n• Facial: Rs. 3,000+\n• Hair Color: Rs. 5,000+\n• Bridal Package: Rs. 15,000+"
-            elif "hour" in msg_lower or "open" in msg_lower or "time" in msg_lower:
-                ai_reply = "🕒 We are open Monday to Saturday from 9:00 AM to 6:00 PM in Kuliyapitiya."
-            else:
-                ai_reply = "Thank you for reaching out to Chanu Salon! 💖 Would you like to schedule an appointment, or speak directly with our reception at 070 446 8888?"
+        ai_reply = get_multilingual_fallback(message, is_escalated=is_escalated)
 
     return jsonify({
         "reply": ai_reply,
@@ -285,7 +351,6 @@ def handle_whatsapp():
     name = ""
     message = ""
 
-    # Parse nested Meta WhatsApp Cloud API format
     try:
         entries = data.get("entry", [])
         if entries and isinstance(entries, list):
@@ -304,7 +369,6 @@ def handle_whatsapp():
     except Exception:
         pass
 
-    # Fallback to direct parameters
     if not sender:
         sender = data.get("sender") or data.get("phone") or data.get("from") or "0781468988"
     if not name:
@@ -316,7 +380,6 @@ def handle_whatsapp():
     is_escalated, escalation_reason = detect_escalation(message)
     stage = "Prospect" if ("book" in message.lower() or "slot" in message.lower()) else "Lead"
 
-    # Automatically ingest lead into Cloud Firestore with Data Quality & Escalation checks
     lead_saved = save_lead_to_firestore(
         channel="whatsapp",
         customer_name=name,
@@ -330,10 +393,7 @@ def handle_whatsapp():
 
     ai_response = query_gemini(message, WHATSAPP_AGENT_PROMPT)
     if not ai_response:
-        if is_escalated:
-            ai_response = f"Dear {name}, we sincerely apologize for the inconvenience. *Our Salon Manager has been directly notified* and will reach out to you on this number as a priority matter."
-        else:
-            ai_response = f"Hello {name}! 🌸 Thank you for messaging *Chanu Salon*. We are open Mon-Sat 9AM-6PM in Kuliyapitiya. How may we pamper you today?"
+        ai_response = get_multilingual_fallback(message, is_escalated=is_escalated)
 
     result = {
         "status": "success",
@@ -348,7 +408,6 @@ def handle_whatsapp():
     }
     return jsonify(result)
 
-# Dedicated lead submission endpoint with validation
 def handle_lead_submission():
     req_data = request.get_json(silent=True) or {}
     channel = req_data.get("channel", "website")
@@ -366,13 +425,12 @@ def handle_lead_submission():
         "is_escalated": is_escalated
     })
 
-# Add Case / Touchpoint Endpoint (Slide 9 & 11)
 def handle_add_case():
     req_data = request.get_json(silent=True) or {}
     phone = normalize_phone(req_data.get("phone", ""))
     case_title = req_data.get("title", "Special Case / Note")
     case_description = req_data.get("description", "")
-    case_type = req_data.get("type", "Preference") # Preference, Complaint, Inquiry, Allergy
+    case_type = req_data.get("type", "Preference")
 
     if not phone or not FIREBASE_PROJECT_ID or not FIREBASE_API_KEY:
         return jsonify({"success": False, "error": "Missing phone or credentials"}), 400
@@ -395,7 +453,6 @@ def handle_add_case():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# Catch-all and smart route dispatcher
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'OPTIONS'])
 @app.route('/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
 def dispatch(path):
@@ -417,8 +474,8 @@ def dispatch(path):
         return jsonify({
             "status": "ok", 
             "service": "Chanu Salon AI Business Brain API",
-            "version": "2.0-Agentforce-Ready",
-            "pillars": ["The Memory (Customer 360)", "The Senses (Data Quality & Churn)", "The Reflexes (Autonomous AI Agent)"],
+            "version": "2.1-Multilingual-Ready",
+            "supportedLanguages": ["English", "Sinhala (සිංහල)", "Singlish"],
             "active": True
         })
 

@@ -56,10 +56,11 @@
                 </div>
                 <div class="ai-modal-body" id="aiChatBody">
                     <div class="ai-msg bot">
-                        Hello gorgeous! 🌸 I am <strong>Anya</strong>, your Chanu Salon AI beauty advisor. How may I pamper you today? Feel free to ask about our bespoke haircuts, facials, bridal packages, or scheduling!
+                        Hello gorgeous! 🌸 I am <strong>Anya</strong>, your Chanu Salon AI beauty concierge. Feel free to ask in English, සිංහලෙන්, or Singlish about our haircuts, facials, bridal packages, or scheduling!
                     </div>
                     <div class="ai-quick-prompts" id="aiQuickPrompts">
-                        <button onclick="askPrompt('What are your couture haircut rates?')"><i class="fas fa-cut" style="color: #e11d48;"></i> Haircut rates?</button>
+                        <button onclick="askPrompt('කොණ්ඩේ කපන්න සහ Facials වලට ගණන් කීයද?')"><i class="fas fa-cut" style="color: #e11d48;"></i> කොණ්ඩේ & Facial ගණන්?</button>
+                        <button onclick="askPrompt('What are your couture haircut rates?')"><i class="fas fa-sparkles" style="color: #e11d48;"></i> Haircut rates?</button>
                         <button onclick="askPrompt('What are the benefits of your Gold & Diamond facials?')"><i class="fas fa-sparkles" style="color: #e11d48;"></i> Facial treatments?</button>
                         <button onclick="askPrompt('How can I book an appointment slot?')"><i class="far fa-calendar-check" style="color: #e11d48;"></i> How to book a slot?</button>
                         <button onclick="requestCallbackLead()"><i class="fas fa-phone-alt" style="color: #e11d48;"></i> Request VIP Callback / Book</button>
@@ -67,7 +68,7 @@
                     </div>
                 </div>
                 <div class="ai-modal-footer">
-                    <input type="text" id="aiInput" placeholder="Ask about styling, pricing, slots, or leave your phone..." onkeypress="handleAIKeyPress(event)" autocomplete="off">
+                    <input type="text" id="aiInput" placeholder="Ask in English or සිංහලෙන් (e.g. කොණ්ඩේ කපන්න කීයද?)..." onkeypress="handleAIKeyPress(event)" autocomplete="off">
                     <button onclick="sendAIMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -219,7 +220,10 @@ window.sendAIMessage = async function() {
         typingDiv.innerHTML = formatted;
     } catch (err) {
         typingDiv.classList.remove('typing');
-        typingDiv.innerHTML = "I am ready to help! 🌸 Please call our salon desk at <strong>070 446 8888</strong> or book your slot right here.";
+        const isSinhala = /[\u0D80-\u0DFF]/.test(text) || /(sinhala|sinhalen|puluwan|kiyada|ganan|karanna|danna)/i.test(text);
+        typingDiv.innerHTML = isSinhala 
+            ? "මම ඔබට උදව් කිරීමට සූදානම්! 🌸 අපගේ සැලෝන් පිළිගැනීමේ අංශය (070 446 8888) අමතන්න හෝ මෙම පිටුවෙන්ම ඔබගේ Slot එක වෙන් කරගන්න."
+            : "I am ready to help! 🌸 Please call our salon desk at <strong>070 446 8888</strong> or book your slot right here.";
     }
 
     chatBody.scrollTop = chatBody.scrollHeight;
