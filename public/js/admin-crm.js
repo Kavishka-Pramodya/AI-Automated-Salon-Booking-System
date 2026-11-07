@@ -625,15 +625,16 @@ function renderTodayScheduleTable() {
         else if (item.status === 'Cancelled') statusClass = 'status-cancelled';
         else if (item.status === 'Escalated') statusClass = 'status-cancelled';
 
+        const displayTime = item.submissionTime || item.bookingTime || '--:--';
         html += `
-            <tr>
+            <tr onclick="openBookingDetailModal('${item.id}')" style="cursor: pointer;" title="Click to view full booking details & actions">
                 <td><strong>#${idx + 1}</strong></td>
-                <td><span class="slot-pill">${escapeHtml(item.bookingTime || '--:--')}</span></td>
+                <td><span class="slot-pill" title="Booking submitted at (SLST)">${escapeHtml(displayTime)}</span></td>
                 <td><strong>${escapeHtml(item.customerName || 'Valued Client')}</strong> <span class="client-phone">${escapeHtml(item.customerPhone || '')}</span></td>
                 <td>${escapeHtml(item.service || 'General Service')}</td>
                 <td>${channelBadge}</td>
                 <td><strong>Rs. ${Number(item.price || 0).toLocaleString()}</strong></td>
-                <td><span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Confirmed')}</span></td>
+                <td><span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Pending')}</span></td>
             </tr>
         `;
     });
@@ -689,8 +690,9 @@ function renderCRMTable() {
         const waMsg = encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon regarding your inquiry for ${item.service} on ${item.bookingDate} at ${item.bookingTime}.`);
         const waLink = `https://wa.me/${intlPhone}?text=${waMsg}`;
 
+        const displayTime = item.submissionTime || item.bookingTime || '--:--';
         rowsHtml += `
-            <tr ${item.isEscalated ? 'style="background: #fff5f5;"' : ''}>
+            <tr onclick="openBookingDetailModal('${item.id}')" style="cursor: pointer; ${item.isEscalated ? 'background: #fff5f5;' : ''}" title="Click to view full booking details & actions">
                 <td><strong>#${index + 1}</strong></td>
                 <td>${channelBadge}</td>
                 <td>
@@ -706,13 +708,13 @@ function renderCRMTable() {
                 </td>
                 <td>
                     <strong>${escapeHtml(item.bookingDate || '--')}</strong>
-                    <span class="slot-pill">${escapeHtml(item.bookingTime || '--:--')}</span>
+                    <span class="slot-pill" title="Booking submitted at (SLST)">${escapeHtml(displayTime)}</span>
                 </td>
                 <td><strong>Rs. ${Number(item.price || 0).toLocaleString()}</strong></td>
-                <td><span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Confirmed')}</span></td>
-                <td>
+                <td><span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Pending')}</span></td>
+                <td onclick="event.stopPropagation()">
                     <div class="action-buttons-group">
-                        <button class="btn-action check" title="Mark Confirmed" onclick="updateStatus('${item.id}', 'Confirmed')"><i class="fas fa-check"></i></button>
+                        <button class="btn-action check" title="Confirm Booking with Alert" onclick="confirmAppointmentWithAlert('${item.id}')"><i class="fas fa-check"></i></button>
                         <button class="btn-action complete" title="Mark Completed" onclick="updateStatus('${item.id}', 'Completed')"><i class="fas fa-check-double"></i></button>
                         <button class="btn-action cancel" title="Cancel Booking" onclick="updateStatus('${item.id}', 'Cancelled')"><i class="fas fa-times"></i></button>
                         ${cleanPhone ? `<a href="${waLink}" target="_blank" class="btn-action wa-btn" title="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
@@ -1067,3 +1069,178 @@ document.addEventListener('DOMContentLoaded', () => {
     window.checkAdminAuth();
 });
 
+
+
+// ------------------------------------------------------------------------------
+// BOOKING DETAILS MODAL & CUSTOMER CONFIRMATION SOUND ALERT
+// ------------------------------------------------------------------------------
+window.playChimeSound = function() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        
+        // Bell 1: E5 (659.25 Hz)
+        const osc1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        g1.gain.setValueAtTime(0.25, now);
+        g1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc1.connect(g1);
+        g1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Bell 2: B5 (987.77 Hz)
+        const osc2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(987.77, now + 0.12);
+        g2.gain.setValueAtTime(0.3, now + 0.12);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+        osc2.connect(g2);
+        g2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.65);
+    } catch (e) {
+        console.warn('Audio chime notice:', e);
+    }
+};
+
+window.confirmAppointmentWithAlert = async function(docId) {
+    window.playChimeSound();
+    await window.updateStatus(docId, 'Confirmed');
+
+    // Broadcast confirmation to client session via localStorage
+    try {
+        localStorage.setItem('chanu_last_confirmed_id', docId);
+        localStorage.setItem('chanu_last_confirmed_time', Date.now());
+    } catch(e) {}
+
+    // Update modal badge if currently open for this booking
+    if (window._currentModalAppointment && window._currentModalAppointment.id === docId) {
+        const badge = document.getElementById('bmStatusBadge');
+        if (badge) badge.innerHTML = `<span class="status-badge status-confirmed">Confirmed</span>`;
+    }
+
+    window.showAdminToast("✅ Appointment Confirmed! Notification & alert chime dispatched to client.");
+};
+
+window.openBookingDetailModal = function(id) {
+    const item = allAppointments.find(x => x.id === id);
+    if (!item) return;
+    window._currentModalAppointment = item;
+    window._currentModalAppointmentId = id;
+
+    const modal = document.getElementById('bookingDetailModal');
+    if (!modal) return;
+
+    const shortId = (item.id || '').length > 6 ? item.id.slice(-6).toUpperCase() : item.id;
+    document.getElementById('bmModalTitle').textContent = `Appointment #${shortId}`;
+    document.getElementById('bmModalId').textContent = `Record ID: ${item.id} • Channel: ${item.channel || 'web'}`;
+    document.getElementById('bmCustomerName').textContent = item.customerName || 'Valued Client';
+    document.getElementById('bmCustomerPhone').textContent = item.customerPhone || 'Not provided';
+    document.getElementById('bmServiceName').textContent = item.service || 'General Service';
+    document.getElementById('bmServicePrice').textContent = `Rs. ${Number(item.price || 0).toLocaleString()}`;
+    
+    const displayTime = item.submissionTime || item.bookingTime || '--:--';
+    document.getElementById('bmSubmissionTime').textContent = `${displayTime} (Date: ${item.bookingDate || '--'})`;
+    
+    let statusClass = 'status-pending';
+    if (item.status === 'Confirmed') statusClass = 'status-confirmed';
+    else if (item.status === 'Completed') statusClass = 'status-completed';
+    else if (item.status === 'Cancelled') statusClass = 'status-cancelled';
+    else if (item.status === 'Escalated') statusClass = 'status-cancelled';
+
+    document.getElementById('bmStatusBadge').innerHTML = `<span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Pending')}</span>`;
+    document.getElementById('bmInquiryText').textContent = item.inquiry || item.inquiry_text || 'No extra notes provided.';
+
+    // WhatsApp quick link
+    const cleanPhone = normalizePhone(item.customerPhone);
+    const intlPhone = cleanPhone.startsWith('0') ? '94' + cleanPhone.substring(1) : cleanPhone;
+    const waLink = document.getElementById('bmBtnWhatsApp');
+    if (waLink) {
+        if (cleanPhone) {
+            waLink.style.display = 'inline-flex';
+            const msg = encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon regarding your appointment for ${item.service} booked at ${displayTime}.`);
+            waLink.href = `https://wa.me/${intlPhone}?text=${msg}`;
+        } else {
+            waLink.style.display = 'none';
+        }
+    }
+
+    modal.style.display = 'flex';
+};
+
+window.closeBookingDetailModal = function() {
+    const modal = document.getElementById('bookingDetailModal');
+    if (modal) modal.style.display = 'none';
+    window._currentModalAppointment = null;
+    window._currentModalAppointmentId = null;
+};
+
+window.confirmFromModal = async function() {
+    if (!window._currentModalAppointmentId) return;
+    await window.confirmAppointmentWithAlert(window._currentModalAppointmentId);
+};
+
+window.completeFromModal = async function() {
+    if (!window._currentModalAppointmentId) return;
+    await window.updateStatus(window._currentModalAppointmentId, 'Completed');
+    const badge = document.getElementById('bmStatusBadge');
+    if (badge) badge.innerHTML = `<span class="status-badge status-completed">Completed</span>`;
+    window.showAdminToast("Appointment marked as Completed.");
+};
+
+window.cancelFromModal = async function() {
+    if (!window._currentModalAppointmentId) return;
+    if (confirm("Are you sure you want to cancel this booking?")) {
+        await window.updateStatus(window._currentModalAppointmentId, 'Cancelled');
+        const badge = document.getElementById('bmStatusBadge');
+        if (badge) badge.innerHTML = `<span class="status-badge status-cancelled">Cancelled</span>`;
+        window.showAdminToast("Booking marked as Cancelled.");
+    }
+};
+
+window.showAdminToast = function(msg) {
+    const existing = document.getElementById('adminToastNotification');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'adminToastNotification';
+    toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: #0f172a; color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 700; z-index: 100000; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px; border-left: 4px solid #10b981; animation: slideInUp 0.3s ease;';
+    toast.innerHTML = `<span>${msg}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 350);
+    }, 3500);
+};
+
+window.toggleAdminSidebar = function(force) {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (!sidebar) return;
+    const isOpen = sidebar.classList.contains('open');
+    const shouldOpen = (force !== undefined) ? force : !isOpen;
+    if (shouldOpen) {
+        sidebar.classList.add('open');
+        if (backdrop) backdrop.classList.add('active');
+    } else {
+        sidebar.classList.remove('open');
+        if (backdrop) backdrop.classList.remove('active');
+    }
+};
+
+// Auto close mobile sidebar on tab switch
+const origSwitchAdminTab = window.switchAdminTab;
+if (typeof origSwitchAdminTab === 'function') {
+    window.switchAdminTab = function(tabName) {
+        window.toggleAdminSidebar(false);
+        return origSwitchAdminTab(tabName);
+    };
+}

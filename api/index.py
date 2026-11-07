@@ -68,6 +68,15 @@ Your mission is to welcome clients warmly, recommend tailored hair, skin, and br
   -> DO NOT restart! Immediately provide the next step: suggest 2-3 specific available times (e.g., "නියමයි! අද උදෑසන 10:00, 11:30 හෝ සවස 2:30 වැනි වේලාවක් ඔබට පහසුද?"), confirm what treatment they want, and ask for their name and WhatsApp/mobile number so the salon can confirm the booking slot.
 - Always match the exact language (Sinhala, Singlish, or English) that the user is currently speaking in.
 
+
+[CRITICAL: ALWAYS CAPTURE BOTH FULL NAME AND PHONE/WHATSAPP NUMBER]
+Whenever the client expresses interest in booking an appointment, checks slots, or says "ow help krnn", "slot ekak danna", "book krnn", "appointment ekak ganna":
+You MUST ALWAYS ask for BOTH their Full Name AND Mobile / WhatsApp Number TOGETHER in a single friendly message:
+- Sinhala: "කරුණාකර ඔබගේ සම්පූර්ණ නම (Full Name) සහ දුරකථන / WhatsApp අංකය මට ලබා දෙන්න. මම වහාම ඔබ වෙනුවෙන් මෙම booking එක සටහන් කර අපගේ කළමනාකාරීත්වය මඟින් තහවුරු කර දෙන්නම්! 💖"
+- Singlish: "Karunakara oyage Full Name eka saha Mobile / WhatsApp Phone Number eka mata laba denna. Mama e welaavema booking slot eka submit karala confirm karala dennam! 💖"
+- English: "Please provide both your Full Name and Mobile/WhatsApp Number so I can immediately log and confirm your appointment slot with our salon management! 💖"
+NEVER ask for only the phone or only the name. ALWAYS ask for BOTH at the same time!
+
 [HUMAN HAND-OFF (ESCALATION)]
 - If the client expresses frustration, reports a bad experience, requests a refund, or asks to speak with the manager, respond with genuine empathy, reassure them in their language, and explain that you are escalating this directly to our Salon Director for immediate personal attention.
 """
@@ -267,7 +276,9 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
         data_quality_score -= 10
 
     initial_status = "Escalated" if is_escalated else "Pending"
-    final_time = booking_time if booking_time else sl_now.strftime("%H:%M")
+    submission_time = sl_now.strftime("%H:%M")
+    # Table Time column strictly records the time when the booking action occurred (Sri Lanka Local Time)
+    final_time = submission_time
 
     payload = {
         "fields": {
@@ -277,6 +288,8 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
             "service": {"stringValue": str(service or "Consultation Inquiry")},
             "bookingDate": {"stringValue": sl_now.strftime("%Y-%m-%d")},
             "bookingTime": {"stringValue": str(final_time)},
+            "submissionTime": {"stringValue": str(submission_time)},
+            "requestedSlot": {"stringValue": str(booking_time or "")},
             "price": {"integerValue": str(int(price or 0))},
             "status": {"stringValue": initial_status},
             "stage": {"stringValue": str(stage)},
@@ -312,8 +325,8 @@ def get_multilingual_fallback(message, is_escalated=False):
     # 1. User confirms / affirms assistance (e.g. "ow help krnn", "ow", "yes")
     if any(k in msg_lower for k in ["ow help", "help krnn", "help karanna", "ow", "yes", "sure", "hari"]):
         if is_si:
-            return "අනිවාර්යයෙන්ම! අද දිනයේ ඔබට වෙන් කරගැනීමට අවශ්‍ය සේවාව (Haircut, Facial, Color, Treatment) සහ පහසු වේලාව (උදෑසන 9:00 - සවස 6:00 අතර) කුමක්ද? ඔබගේ නම සහ දුරකථන අංකය සඳහන් කළහොත් අපගේ Reception මඟින් slot එක වෙන් කරනු ඇත. 💖"
-        return "Certainly! What service and preferred time (between 9:00 AM - 6:00 PM) would you like to schedule? Please share your name and contact number to confirm your booking! 💖"
+            return "අනිවාර්යයෙන්ම! අද දිනයේ ඔබට වෙන් කරගැනීමට අවශ්‍ය සේවාව (Haircut, Facial, Color, Treatment) සහ පහසු වේලාව (උදෑසන 9:00 - සවස 6:00 අතර) කුමක්ද? කරුණාකර ඔබගේ සම්පූර්ණ නම (Full Name) සහ දුරකථන / WhatsApp අංකය මට ලබා දෙන්න. මම වහාම slot එක වෙන් කරවා දෙන්නම්! 💖"
+        return "Certainly! What service and preferred time (between 9:00 AM - 6:00 PM) would you like to schedule? Please provide both your Full Name and Mobile/WhatsApp Number so I can immediately confirm your slot! 💖"
 
     # 2. User asks about language / speaking in Sinhala
     if any(k in msg_lower for k in ["sinhalen", "sinhala", "සිංහල", "language", "bahawe", "katha"]):

@@ -151,13 +151,13 @@ window.requestCallbackLead = function() {
     } else {
         const botDiv = document.createElement('div');
         botDiv.className = 'ai-msg bot';
-        botDiv.innerHTML = `I would love to have our team contact you! 🌸 Please enter your <strong>Mobile Number</strong> in the box below so our reception can connect with you.`;
+        botDiv.innerHTML = `I would love to arrange your slot! 🌸 Please enter your <strong>Full Name and Mobile Phone Number</strong> (e.g. <em>Anuki Perera 071XXXXXXX</em>) in the box below so our reception team can confirm your booking.`;
         chatBody.appendChild(botDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
 
         const input = document.getElementById('aiInput');
         if (input) {
-            input.placeholder = "Enter your phone (e.g. 071XXXXXXX)...";
+            input.placeholder = "Enter your Full Name & Phone (e.g. Anuki 071XXXXXXX)...";
             input.focus();
         }
     }
@@ -194,6 +194,14 @@ window.sendAIMessage = async function() {
 
     // Append user message to multi-turn conversation history
     window._chanuChatHistory.push({ role: 'user', content: text });
+
+    // Store customer phone in localStorage if provided in message
+    const phoneMatch = text.match(/(07\d{8}|\+94\d{9}|011\d{7})/);
+    if (phoneMatch) {
+        try {
+            localStorage.setItem('chanu_client_phone', phoneMatch[1]);
+        } catch(e) {}
+    }
 
     const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
     const payload = {
@@ -253,4 +261,121 @@ function formatChatText(str) {
     let formatted = str.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
     formatted = formatted.replace(/\n/g, '<br>');
     return formatted;
+}
+
+
+// ------------------------------------------------------------------------------
+// CUSTOMER CONFIRMATION ALERT & WEBAUDIO CHIME (Slide 9 & Customer Reflexes)
+// ------------------------------------------------------------------------------
+function playCustomerChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        
+        // Chime Note 1: E5 (659.25 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.25, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Chime Note 2: B5 (987.77 Hz)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(987.77, now + 0.12);
+        gain2.gain.setValueAtTime(0.3, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.7);
+    } catch (e) {
+        console.warn('Audio chime notice:', e);
+    }
+}
+
+function showCustomerConfirmationAlert(title, message) {
+    playCustomerChime();
+
+    let toast = document.getElementById('chanuCustomerConfirmAlert');
+    if (toast) toast.remove();
+
+    toast = document.createElement('div');
+    toast.id = 'chanuCustomerConfirmAlert';
+    toast.className = 'chanu-customer-confirm-toast';
+    toast.innerHTML = `
+        <div class="toast-crown-icon"><i class="fas fa-crown"></i></div>
+        <div class="toast-content-wrapper">
+            <h4 class="toast-title">${title || 'Appointment Confirmed! 🎉'}</h4>
+            <p class="toast-description">${message || 'Your appointment at Chanu Salon has been confirmed by our Salon Director. We are excited to welcome you!'}</p>
+        </div>
+        <button type="button" class="toast-dismiss-btn" onclick="this.closest('#chanuCustomerConfirmAlert').remove()">&times;</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Also append greeting to Anya Chatbot window if open
+    const chatBody = document.getElementById('aiChatBody');
+    if (chatBody) {
+        const botNotice = document.createElement('div');
+        botNotice.className = 'ai-msg bot';
+        botNotice.style.background = '#ecfdf5';
+        botNotice.style.border = '1px solid #a7f3d0';
+        botNotice.style.color = '#065f46';
+        botNotice.innerHTML = `<strong><i class="fas fa-check-circle" style="color: #059669;"></i> Live Update:</strong> Your booking has just been <strong>CONFIRMED</strong> by Chanu Salon Management! 💖 Our master stylists look forward to pampering you.`;
+        chatBody.appendChild(botNotice);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    setTimeout(() => {
+        if (toast && toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.4s';
+            setTimeout(() => toast.remove(), 420);
+        }
+    }, 9000);
+}
+
+function initCustomerConfirmationMonitor() {
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'chanu_last_confirmed_id' && e.newValue) {
+            const alertedKey = 'chanu_notified_' + e.newValue;
+            if (!sessionStorage.getItem(alertedKey)) {
+                sessionStorage.setItem(alertedKey, 'true');
+                showCustomerConfirmationAlert(
+                    'Appointment Confirmed! 🎉',
+                    'Your appointment at Chanu Salon has been officially confirmed by our Salon Director.'
+                );
+            }
+        }
+    });
+
+    setInterval(() => {
+        const lastConfirmedId = localStorage.getItem('chanu_last_confirmed_id');
+        const lastConfirmedTime = parseInt(localStorage.getItem('chanu_last_confirmed_time') || '0', 10);
+        
+        if (lastConfirmedId && Date.now() - lastConfirmedTime < 60000) {
+            const alertedKey = 'chanu_notified_' + lastConfirmedId;
+            if (!sessionStorage.getItem(alertedKey)) {
+                sessionStorage.setItem(alertedKey, 'true');
+                showCustomerConfirmationAlert(
+                    'Appointment Confirmed! 🎉',
+                    'Your appointment at Chanu Salon has been officially confirmed by our Salon Director.'
+                );
+            }
+        }
+    }, 4000);
+}
+
+if (typeof window !== 'undefined') {
+    initCustomerConfirmationMonitor();
 }
