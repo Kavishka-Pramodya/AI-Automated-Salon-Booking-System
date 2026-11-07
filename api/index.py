@@ -4,7 +4,7 @@ import json
 import os
 import re
 import requests
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 try:
     from dotenv import load_dotenv
@@ -90,6 +90,40 @@ Rules:
 - If customer is unhappy, express empathy and state that the Salon Manager has been alerted to call them.
 - Always offer to confirm a 30-minute slot or call reception at 070 446 8888.
 """
+
+
+def extract_time_intent(text):
+    """Extracts slot or appointment time from message (e.g., 10:30, 10.30 a.m, 2:00 pm)."""
+    if not text:
+        return ""
+    match = re.search(r'(\b\d{1,2}[:.]\d{2}\s*(?:am|pm|a\.m\.|p\.m\.)?|\b\d{1,2}\s*(?:am|pm|a\.m\.|p\.m\.))\b', text, re.IGNORECASE)
+    if match:
+        t = match.group(1).replace('.', ':').strip()
+        t = re.sub(r'a[:.]?m[:.]?', 'AM', t, flags=re.IGNORECASE)
+        t = re.sub(r'p[:.]?m[:.]?', 'PM', t, flags=re.IGNORECASE)
+        return t.strip()
+    return ""
+
+def extract_service_intent(text, history=None):
+    """Detects service name and estimated price from current message or conversation history."""
+    combined = (text or "").lower()
+    if history and isinstance(history, list):
+        for h in history:
+            combined += " " + (h.get("content", "") or "").lower()
+
+    if any(k in combined for k in ["color", "colour", "balayage", "ombre", "highlight"]):
+        return "Balayage, Ombre & Creative Color", 5000
+    elif any(k in combined for k in ["facial", "skin", "clean up", "glow"]):
+        return "Botanical Gold & Diamond Facial", 3000
+    elif any(k in combined for k in ["bridal", "dressing", "manali"]):
+        return "Royal Bridal Dressing", 15000
+    elif any(k in combined for k in ["keratin", "botox", "straight"]):
+        return "Keratin & Hair Botox Therapy", 7500
+    elif any(k in combined for k in ["mani", "pedi", "nail"]):
+        return "Luxury Manicure & Pedicure", 2500
+    elif any(k in combined for k in ["hair", "cut", "konde", "trim", "styling"]):
+        return "Couture Hair Cutting & Styling", 1500
+    return "Website AI Concierge Inquiry", 0
 
 # ==============================================================================
 # DATA QUALITY UTILITIES & LANGUAGE DETECTION
@@ -215,12 +249,13 @@ def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT, history=None):
 # FIRESTORE INTEGRATION (THE MEMORY: 5 ENTITIES & LIFECYCLE STAGES)
 # ==============================================================================
 
-def save_lead_to_firestore(channel, customer_name, customer_phone, service, inquiry_text, price=0, is_escalated=False, escalation_reason="", stage="Lead"):
+def save_lead_to_firestore(channel, customer_name, customer_phone, service, inquiry_text, price=0, is_escalated=False, escalation_reason="", stage="Lead", booking_time=None):
     if not FIREBASE_PROJECT_ID or not FIREBASE_API_KEY:
         return False
 
     clean_phone = normalize_phone(customer_phone)
-    now = datetime.now()
+    # Convert to Sri Lanka Local Time (SLST = UTC+5:30)
+    sl_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
     url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/appointments?key={FIREBASE_API_KEY}"
     
     data_quality_score = 100
@@ -232,6 +267,7 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
         data_quality_score -= 10
 
     initial_status = "Escalated" if is_escalated else "Pending"
+    final_time = booking_time if booking_time else sl_now.strftime("%H:%M")
 
     payload = {
         "fields": {
@@ -239,8 +275,8 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
             "customerName": {"stringValue": str(customer_name or "Valued Client").strip().title()},
             "customerPhone": {"stringValue": str(clean_phone)},
             "service": {"stringValue": str(service or "Consultation Inquiry")},
-            "bookingDate": {"stringValue": now.strftime("%Y-%m-%d")},
-            "bookingTime": {"stringValue": now.strftime("%H:%M")},
+            "bookingDate": {"stringValue": sl_now.strftime("%Y-%m-%d")},
+            "bookingTime": {"stringValue": str(final_time)},
             "price": {"integerValue": str(int(price or 0))},
             "status": {"stringValue": initial_status},
             "stage": {"stringValue": str(stage)},
@@ -249,8 +285,8 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
             "isEscalated": {"booleanValue": bool(is_escalated)},
             "escalationReason": {"stringValue": str(escalation_reason or "")},
             "dataQualityScore": {"integerValue": str(data_quality_score)},
-            "createdAt": {"stringValue": now.isoformat()},
-            "updatedAt": {"stringValue": now.isoformat()}
+            "createdAt": {"stringValue": sl_now.isoformat()},
+            "updatedAt": {"stringValue": sl_now.isoformat()}
         }
     }
     try:
@@ -356,8 +392,18 @@ def handle_chat():
     # 2. Check for Reflex Human Escalation Trigger
     is_escalated, escalation_reason = detect_escalation(message)
 
-    # 3. Detect Stage: If booking request -> Prospect; If complaint -> Case/Escalation; Else -> Lead
-    stage = "Prospect" if ("book" in message.lower() or "slot" in message.lower() or "welawe" in message.lower()) else "Lead"
+    # 3. Smart Entity Extraction (Slot Time, Service, and Estimated Price)
+    detected_time = extract_time_intent(message)
+    detected_service, detected_price = extract_service_intent(message, history)
+
+    is_booking_intent = bool(detected_time) or any(k in message.lower() for k in [
+        "book", "slot", "welawe", "welawa", "appointment", "reserve", "date", "time", "help krnn"
+    ])
+    stage = "Prospect" if is_booking_intent else "Lead"
+
+    final_service = detected_service if detected_service != "Website AI Concierge Inquiry" else (
+        "Website AI Concierge Inquiry" if not is_escalated else "URGENT: Customer Escalation Case"
+    )
 
     # If contact available or escalation triggered, save directly to Firestore
     lead_saved = False
@@ -366,11 +412,13 @@ def handle_chat():
             channel="website",
             customer_name=user_name,
             customer_phone=user_phone,
-            service="Website AI Concierge Inquiry" if not is_escalated else "URGENT: Customer Escalation Case",
+            service=final_service,
             inquiry_text=message,
+            price=detected_price,
             is_escalated=is_escalated,
             escalation_reason=escalation_reason,
-            stage=stage
+            stage=stage,
+            booking_time=detected_time
         )
 
     # 4. Generate Grounded AI Response (Gemini API with fallback)
