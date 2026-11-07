@@ -60,6 +60,14 @@ Your mission is to welcome clients warmly, recommend tailored hair, skin, and br
 - Never share details or contact information of other salon clients.
 - If unsure about specific medical skin conditions, advise booking a physical consultation with our senior stylist.
 
+
+[CONVERSATION CONTINUITY & CONTEXT MEMORY]
+- You have access to recent conversation history. Keep strict conversational context across all turns.
+- NEVER reset the conversation or repeat initial introductions/welcome greetings ("ආයුබෝවන්... මම Anya... කොහොමද උදව් කරන්නේ?") if the client is already conversing with you!
+- When you ask a question or offer assistance (e.g., "Do you want me to help you check available times?"), and the client replies with a confirmation or short phrase like "ow help krnn", "ow", "yes", "sure", "hari", "okay", "slot ekak danna":
+  -> DO NOT restart! Immediately provide the next step: suggest 2-3 specific available times (e.g., "නියමයි! අද උදෑසන 10:00, 11:30 හෝ සවස 2:30 වැනි වේලාවක් ඔබට පහසුද?"), confirm what treatment they want, and ask for their name and WhatsApp/mobile number so the salon can confirm the booking slot.
+- Always match the exact language (Sinhala, Singlish, or English) that the user is currently speaking in.
+
 [HUMAN HAND-OFF (ESCALATION)]
 - If the client expresses frustration, reports a bad experience, requests a refund, or asks to speak with the manager, respond with genuine empathy, reassure them in their language, and explain that you are escalating this directly to our Salon Director for immediate personal attention.
 """
@@ -114,7 +122,8 @@ def is_sinhala_or_singlish(text):
         "sinhalen", "sinhala", "puluwanda", "puluwan", "oyt", "oya", "mata", "kiyada", "ganan", 
         "kohomada", "welawe", "karanna", "denn", "ona", "danna", "enne", "thiyenawada", 
         "thiyenne", "sathiye", "kapanne", "konde", "awul", "katha", "hondayi", "hari", 
-        "mokakda", "kawadda", "dapanko", "ahanna", "kiyapan", "salli", "ganne", "balanna"
+        "mokakda", "kawadda", "dapanko", "ahanna", "kiyapan", "salli", "ganne", "balanna", 
+        "ow", "help", "krnn", "slot", "book", "ekak", "ude", "hawasa", "dawasa", "kamathi", "one"
     ]
     text_lower = text.lower()
     return any(w in text_lower for w in singlish_keywords)
@@ -137,19 +146,50 @@ def detect_escalation(text):
             return True, f"Triggered keyword: '{kw}'"
     return False, ""
 
-def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT):
-    """Queries Google Gemini API with active 2026 models and automatic fallback."""
+def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT, history=None):
+    """Queries Google Gemini API with active 2026 models, multi-turn history, and automatic fallback."""
     if not GEMINI_API_KEY:
         return None
 
     # Priority list of verified, active 2026 Gemini models
     models = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"]
-    
+
+    # Construct multi-turn contents from history
+    contents = []
+    if history and isinstance(history, list):
+        for turn in history[-10:]:
+            role = turn.get("role", "")
+            text = turn.get("content", "") or turn.get("text", "")
+            if role in ["user", "client"] and text:
+                contents.append({"role": "user", "parts": [{"text": str(text)}]})
+            elif role in ["assistant", "model", "bot"] and text:
+                contents.append({"role": "model", "parts": [{"text": str(text)}]})
+
+    # Gemini requires contents to start with a 'user' turn
+    while contents and contents[0]["role"] != "user":
+        contents.pop(0)
+
+    # Gemini requires strictly alternating roles (user, model, user, model...)
+    cleaned_contents = []
+    for item in contents:
+        if cleaned_contents and cleaned_contents[-1]["role"] == item["role"]:
+            cleaned_contents[-1]["parts"][0]["text"] += "\n" + item["parts"][0]["text"]
+        else:
+            cleaned_contents.append(item)
+    contents = cleaned_contents
+
+    # Ensure current user_msg is the final user turn
+    if not contents or contents[-1]["role"] != "user":
+        contents.append({"role": "user", "parts": [{"text": str(user_msg)}]})
+    else:
+        if str(user_msg) not in contents[-1]["parts"][0]["text"]:
+            contents[-1]["parts"][0]["text"] = str(user_msg)
+
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
         payload = {
             "system_instruction": {"parts": [{"text": prompt}]},
-            "contents": [{"role": "user", "parts": [{"text": user_msg}]}],
+            "contents": contents,
             "generationConfig": {
                 "temperature": 0.65, 
                 "maxOutputTokens": 600
@@ -169,6 +209,7 @@ def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT):
         except Exception:
             continue
     return None
+
 
 # ==============================================================================
 # FIRESTORE INTEGRATION (THE MEMORY: 5 ENTITIES & LIFECYCLE STAGES)
@@ -232,7 +273,13 @@ def get_multilingual_fallback(message, is_escalated=False):
             return "සිදුවූ අපහසුතාවයට අපගේ බලවත් කනගාටුව ප්‍රකාශ කරමු! 🌸 මෙම ගැටලුව මම අපගේ CRM එකෙහි 'Urgent Case' එකක් ලෙස සටහන් කර චානු සැලෝන් අධ්‍යක්ෂකතුමියට (Salon Director) වෙත යොමු කළා. අපගේ කළමනාකාරීත්වය ඉක්මනින්ම ඔබව අමතා මෙය විසඳනු ඇත."
         return "I sincerely apologize for any inconvenience caused. 🌸 I have prioritized this as an Urgent Case in our CRM and notified our Salon Director directly. Our management will contact you promptly to ensure this is made right."
 
-    # 1. User asks about language / speaking in Sinhala
+    # 1. User confirms / affirms assistance (e.g. "ow help krnn", "ow", "yes")
+    if any(k in msg_lower for k in ["ow help", "help krnn", "help karanna", "ow", "yes", "sure", "hari"]):
+        if is_si:
+            return "අනිවාර්යයෙන්ම! අද දිනයේ ඔබට වෙන් කරගැනීමට අවශ්‍ය සේවාව (Haircut, Facial, Color, Treatment) සහ පහසු වේලාව (උදෑසන 9:00 - සවස 6:00 අතර) කුමක්ද? ඔබගේ නම සහ දුරකථන අංකය සඳහන් කළහොත් අපගේ Reception මඟින් slot එක වෙන් කරනු ඇත. 💖"
+        return "Certainly! What service and preferred time (between 9:00 AM - 6:00 PM) would you like to schedule? Please share your name and contact number to confirm your booking! 💖"
+
+    # 2. User asks about language / speaking in Sinhala
     if any(k in msg_lower for k in ["sinhalen", "sinhala", "සිංහල", "language", "bahawe", "katha"]):
         return "ඔව්, අනිවාර්යයෙන්ම මට සිංහලෙන් සහ Singlish වලින් කතා කරන්න පුළුවන්! 🌸 චානු සැලෝන් (Chanu Salon) එකේ Hair cutting, Facials, Hair color, Bridal dressing හෝ Slot booking ගැන ඕනෑම දෙයක් අහන්න. මම ඔබට කොහොමද උදව් කරන්නේ? ✨"
 
@@ -291,6 +338,7 @@ def handle_config():
 def handle_chat():
     req_data = request.get_json(silent=True) or {}
     message = req_data.get("message", "").strip()
+    history = req_data.get("history", [])
     user_name = req_data.get("name", "").strip() or req_data.get("customerName", "Website Visitor")
     user_phone = req_data.get("phone", "").strip() or req_data.get("customerPhone", "")
     is_lead = req_data.get("is_lead", False)
@@ -326,7 +374,7 @@ def handle_chat():
         )
 
     # 4. Generate Grounded AI Response (Gemini API with fallback)
-    ai_reply = query_gemini(message, SALON_AGENT_PROMPT)
+    ai_reply = query_gemini(message, SALON_AGENT_PROMPT, history=history)
     if not ai_reply:
         ai_reply = get_multilingual_fallback(message, is_escalated=is_escalated)
 

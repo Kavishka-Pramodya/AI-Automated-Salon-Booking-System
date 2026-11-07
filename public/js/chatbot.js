@@ -1,3 +1,12 @@
+// Conversation History State for multi-turn conversational context
+window._chanuChatHistory = window._chanuChatHistory || [];
+try {
+    const saved = sessionStorage.getItem('chanu_chat_history');
+    if (saved) window._chanuChatHistory = JSON.parse(saved);
+} catch (e) {
+    window._chanuChatHistory = [];
+}
+
 // public/js/chatbot.js
 // Universal Autonomous Floating AI Concierge for Chanu Salon
 // Auto-mounts on ANY webpage (Home, Login, Register, Admin CRM)
@@ -183,9 +192,13 @@ window.sendAIMessage = async function() {
     chatBody.appendChild(typingDiv);
     chatBody.scrollTop = chatBody.scrollHeight;
 
+    // Append user message to multi-turn conversation history
+    window._chanuChatHistory.push({ role: 'user', content: text });
+
     const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
     const payload = {
         message: text,
+        history: window._chanuChatHistory.slice(-10),
         name: user ? (user.fullName || user.username) : "Website Visitor",
         phone: user ? (user.phone || "") : ""
     };
@@ -209,6 +222,12 @@ window.sendAIMessage = async function() {
         } else {
             replyText = "Hello from Chanu Salon! 🌸 Our services include Couture Haircuts (Rs. 1,500), Facials (Rs. 3,000), and Color (Rs. 5,000). You can reserve an exact slot directly on this page or call 070 446 8888!";
         }
+
+        // Append assistant reply to conversation history
+        window._chanuChatHistory.push({ role: 'assistant', content: replyText });
+        try {
+            sessionStorage.setItem('chanu_chat_history', JSON.stringify(window._chanuChatHistory.slice(-12)));
+        } catch (e) {}
 
         typingDiv.classList.remove('typing');
         let formatted = formatChatText(replyText);
