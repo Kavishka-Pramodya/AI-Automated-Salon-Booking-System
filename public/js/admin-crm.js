@@ -625,7 +625,7 @@ function renderTodayScheduleTable() {
         else if (item.status === 'Cancelled') statusClass = 'status-cancelled';
         else if (item.status === 'Escalated') statusClass = 'status-cancelled';
 
-        const displayTime = item.submissionTime || item.bookingTime || '--:--';
+        const displayTime = item.requestedSlot || item.bookingTime || item.submissionTime || '--:--';
         html += `
             <tr onclick="openBookingDetailModal('${item.id}')" style="cursor: pointer;" title="Click to view full booking details & actions">
                 <td><strong>#${idx + 1}</strong></td>
@@ -690,7 +690,7 @@ function renderCRMTable() {
         const waMsg = encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon regarding your inquiry for ${item.service} on ${item.bookingDate} at ${item.bookingTime}.`);
         const waLink = `https://wa.me/${intlPhone}?text=${waMsg}`;
 
-        const displayTime = item.submissionTime || item.bookingTime || '--:--';
+        const displayTime = item.requestedSlot || item.bookingTime || item.submissionTime || '--:--';
         rowsHtml += `
             <tr onclick="openBookingDetailModal('${item.id}')" style="cursor: pointer; ${item.isEscalated ? 'background: #fff5f5;' : ''}" title="Click to view full booking details & actions">
                 <td><strong>#${index + 1}</strong></td>
@@ -1146,7 +1146,7 @@ window.openBookingDetailModal = function(id) {
     document.getElementById('bmServiceName').textContent = item.service || 'General Service';
     document.getElementById('bmServicePrice').textContent = `Rs. ${Number(item.price || 0).toLocaleString()}`;
     
-    const displayTime = item.submissionTime || item.bookingTime || '--:--';
+    const displayTime = item.requestedSlot || item.bookingTime || item.submissionTime || '--:--';
     document.getElementById('bmSubmissionTime').textContent = `${displayTime} (Date: ${item.bookingDate || '--'})`;
     
     let statusClass = 'status-pending';
