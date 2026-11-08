@@ -436,7 +436,19 @@ function attachFirestoreListener() {
     try {
         const q = query(collection(db, "appointments"));
         
+        let isInitialSnapshot = true;
         unsubscribeListener = onSnapshot(q, (snapshot) => {
+            const isFirst = isInitialSnapshot;
+            snapshot.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    const data = change.doc.data();
+                    if (!isFirst && (data.status === 'Pending' || data.isEscalated)) {
+                        showAdminNewBookingToast(change.doc.id, data);
+                    }
+                }
+            });
+            isInitialSnapshot = false;
+
             allAppointments = [];
             snapshot.forEach(doc => {
                 allAppointments.push({
@@ -716,7 +728,7 @@ function renderCRMTable() {
                     <div class="action-buttons-group">
                         <button class="btn-action check" title="Confirm Booking with Alert" onclick="confirmAppointmentWithAlert('${item.id}')"><i class="fas fa-check"></i></button>
                         <button class="btn-action complete" title="Mark Completed" onclick="updateStatus('${item.id}', 'Completed')"><i class="fas fa-check-double"></i></button>
-                        <button class="btn-action cancel" title="Cancel Booking" onclick="updateStatus('${item.id}', 'Cancelled')"><i class="fas fa-times"></i></button>
+                        <button class="btn-action cancel" title="Cancel Booking" onclick="cancelAppointmentWithAlert('${item.id}')"><i class="fas fa-times"></i></button>
                         ${cleanPhone ? `<a href="${waLink}" target="_blank" class="btn-action wa-btn" title="Chat on WhatsApp"><i class="fab fa-whatsapp"></i></a>` : ''}
                     </div>
                 </td>
@@ -1197,11 +1209,8 @@ window.completeFromModal = async function() {
 
 window.cancelFromModal = async function() {
     if (!window._currentModalAppointmentId) return;
-    if (confirm("Are you sure you want to cancel this booking?")) {
-        await window.updateStatus(window._currentModalAppointmentId, 'Cancelled');
-        const badge = document.getElementById('bmStatusBadge');
-        if (badge) badge.innerHTML = `<span class="status-badge status-cancelled">Cancelled</span>`;
-        window.showAdminToast("Booking marked as Cancelled.");
+    if (confirm("Are you sure you want to cancel this booking? An alert notice and sound will be sent to the client.")) {
+        await window.cancelAppointmentWithAlert(window._currentModalAppointmentId);
     }
 };
 
@@ -1244,3 +1253,111 @@ if (typeof origSwitchAdminTab === 'function') {
         return origSwitchAdminTab(tabName);
     };
 }
+
+
+
+// Admin Notification Audio Chime (Ascending 3-tone Concierge Bell)
+function playAdminNewBookingChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+
+        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+            gain.gain.setValueAtTime(0.28, now + idx * 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.35);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.12);
+            osc.stop(now + idx * 0.12 + 0.35);
+        });
+    } catch(e) {
+        console.warn('Admin audio chime notice:', e);
+    }
+}
+
+function showAdminNewBookingToast(docId, data) {
+    playAdminNewBookingChime();
+
+    // Flash document title for background tabs
+    const oldTitle = document.title;
+    document.title = "🔔 (1) New Booking Request! - Chanu Admin";
+    setTimeout(() => { document.title = oldTitle; }, 12000);
+
+    let toast = document.getElementById('adminNewBookingToast');
+    if (toast) toast.remove();
+
+    toast = document.createElement('div');
+    toast.id = 'adminNewBookingToast';
+    toast.style.cssText = `
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 16px 22px;
+        border-radius: 16px;
+        border-left: 5px solid #e11d48;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 320px;
+        max-width: 440px;
+        animation: slideInDown 0.4s ease;
+    `;
+
+    const name = data.customerName || 'Valued Client';
+    const time = data.requestedSlot || data.bookingTime || 'New Slot';
+    const serv = data.service || 'Salon Service';
+
+    toast.innerHTML = `
+        <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(225,29,72,0.15); color: #f43f5e; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+            <i class="fas fa-bell"></i>
+        </div>
+        <div style="flex: 1;">
+            <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: #f43f5e; letter-spacing: 0.5px;">New Booking Request</div>
+            <div style="font-size: 14px; font-weight: 700; color: #f8fafc; margin-top: 2px;">${name} • ${time}</div>
+            <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">${serv}</div>
+        </div>
+        <button type="button" style="background: #e11d48; color: #fff; border: none; padding: 7px 13px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;" onclick="openBookingDetailModal('${docId}'); this.closest('#adminNewBookingToast').remove();">View</button>
+        <button type="button" style="background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer;" onclick="this.closest('#adminNewBookingToast').remove();">&times;</button>
+    `;
+
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        if (toast && toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.4s';
+            setTimeout(() => toast.remove(), 400);
+        }
+    }, 15000);
+}
+
+
+window.cancelAppointmentWithAlert = async function(docId) {
+    if (!docId) return;
+    await window.updateStatus(docId, 'Cancelled');
+
+    // Broadcast cancellation to client session via localStorage
+    try {
+        localStorage.setItem('chanu_last_cancelled_id', docId);
+        localStorage.setItem('chanu_last_cancelled_time', Date.now().toString());
+    } catch(e) {}
+
+    // Update modal badge if currently open for this booking
+    if (window._currentModalAppointment && window._currentModalAppointment.id === docId) {
+        const badge = document.getElementById('bmStatusBadge');
+        if (badge) badge.innerHTML = `<span class="status-badge status-cancelled">Cancelled</span>`;
+    }
+
+    window.showAdminToast("⚠️ Appointment marked as Cancelled. Alert message & chime dispatched to client.");
+};
