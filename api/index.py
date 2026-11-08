@@ -263,35 +263,135 @@ def query_gemini(user_msg, prompt=SALON_AGENT_PROMPT, history=None):
 # FIRESTORE INTEGRATION (THE MEMORY: 5 ENTITIES & LIFECYCLE STAGES)
 # ==============================================================================
 
+STOP_WORDS_SET = {
+    "ow", "na", "ne", "ehema", "krl", "krla", "karala", "denna", "dennam", "danna", 
+    "mona", "magulakda", "magulkda", "appa", "puluwanda", "bari", "kiyakda", "kiyada", 
+    "kiyanna", "bada", "hari", "kamak", "welawe", "welawa", "kohomada", "meka", "thawa", 
+    "mata", "ona", "ane", "manda", "mokakda", "kawadada", "help", "thanks", "appointment", 
+    "booking", "slot", "slots", "karanna", "karana", "ganna", "balanna", "balayage", 
+    "color", "colour", "facial", "haircut", "treatment", "price", "rates", "ude", "hawasa", 
+    "today", "ada", "adha", "yes", "sure", "okay", "ok", "fine", "good", "morning", 
+    "afternoon", "hi", "hello", "hey", "please", "call", "me", "is", "and", "the", "for",
+    "name", "nama", "mage", "oyata", "oya", "salon", "chanu", "ekata", "karanna", "ganna"
+}
+
+def extract_valid_customer_name(message, current_name=""):
+    """Extracts a legitimate customer full name and strictly rejects Singlish/conversational phrases."""
+    if not message:
+        return current_name or ""
+    
+    # 1. Explicit pattern (e.g. 'my name is Pramodya Rathnayaka', 'name: Pramodya Rathnayaka', 'mage nama Pramodya')
+    explicit_m = re.search(r'(?:my\s+name\s+is|mage\s+nama\s+is?|nama\s*:?|name\s*:?)\s*([A-Za-z\s]{3,30})', message, re.IGNORECASE)
+    if explicit_m:
+        cand = explicit_m.group(1).strip()
+        words = cand.split()
+        if len(words) >= 1 and not any(w.lower() in STOP_WORDS_SET for w in words):
+            return " ".join(words).title()
+
+    # 2. If phone is in message, look for candidate name accompanying the phone number
+    if re.search(r'(07\d{8}|\+94\d{9}|011\d{7})', message):
+        clean_text = re.sub(r'(07\d{8}|\+94\d{9}|011\d{7})', '', message)
+        clean_text = re.sub(r'[^a-zA-Z\s]', ' ', clean_text).strip()
+        words = [w for w in clean_text.split() if w.lower() not in STOP_WORDS_SET and len(w) >= 2]
+        if 2 <= len(words) <= 4:
+            return " ".join(words).title()
+
+    return current_name or ""
+
 def save_lead_to_firestore(channel, customer_name, customer_phone, service, inquiry_text, price=0, is_escalated=False, escalation_reason="", stage="Lead", booking_time=None):
     if not FIREBASE_PROJECT_ID or not FIREBASE_API_KEY:
         return False
 
     clean_phone = normalize_phone(customer_phone)
+    if not clean_phone:
+        return False
+
     # Convert to Sri Lanka Local Time (SLST = UTC+5:30)
     sl_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
-    url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents/appointments?key={FIREBASE_API_KEY}"
+    today_str = sl_now.strftime("%Y-%m-%d")
+    base_url = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents"
     
     data_quality_score = 100
     if not is_valid_sl_phone(clean_phone):
         data_quality_score -= 30
-    if not customer_name or customer_name == "Website Visitor":
+    if not customer_name or customer_name in ["Website Visitor", "Valued Client"]:
         data_quality_score -= 20
     if not inquiry_text:
         data_quality_score -= 10
 
     initial_status = "Escalated" if is_escalated else "Pending"
     submission_time = sl_now.strftime("%H:%M")
-    # Table Time column strictly records the time when the booking action occurred (Sri Lanka Local Time)
     final_time = submission_time
 
+    # 1. Lead De-duplication: Check if active record exists for this phone today
+    try:
+        query_url = f"{base_url}/appointments?key={FIREBASE_API_KEY}"
+        resp = requests.get(query_url, timeout=5)
+        existing_doc = None
+        if resp.status_code == 200:
+            docs = resp.json().get("documents", [])
+            for d in docs:
+                fields = d.get("fields", {})
+                b_date = fields.get("bookingDate", {}).get("stringValue", "")
+                p_phone = fields.get("customerPhone", {}).get("stringValue", "")
+                p_status = fields.get("status", {}).get("stringValue", "")
+                if b_date == today_str and p_phone == clean_phone and p_status in ["Pending", "Confirmed", "Escalated"]:
+                    existing_doc = d
+                    break
+
+        if existing_doc:
+            # Update (PATCH) existing document instead of creating a duplicate row
+            doc_name = existing_doc["name"]
+            existing_fields = existing_doc.get("fields", {})
+            existing_name = existing_fields.get("customerName", {}).get("stringValue", "")
+            
+            # Protect legitimate customer name from being overwritten by defaults or empty values
+            best_name = customer_name if (customer_name and customer_name not in ["Website Visitor", "Valued Client"]) else (existing_name or "Valued Client")
+            
+            update_fields = {
+                "inquiry": {"stringValue": str(inquiry_text or "")},
+                "updatedAt": {"stringValue": sl_now.isoformat()}
+            }
+            mask_paths = ["inquiry", "updatedAt"]
+
+            if best_name and best_name != existing_name:
+                update_fields["customerName"] = {"stringValue": str(best_name).strip().title()}
+                mask_paths.append("customerName")
+
+            if booking_time:
+                update_fields["requestedSlot"] = {"stringValue": str(booking_time)}
+                mask_paths.append("requestedSlot")
+
+            if service and service not in ["Website AI Concierge Inquiry", "Consultation Inquiry"]:
+                update_fields["service"] = {"stringValue": str(service)}
+                mask_paths.append("service")
+
+            if price and int(price) > 0:
+                update_fields["price"] = {"integerValue": str(int(price))}
+                mask_paths.append("price")
+
+            if is_escalated:
+                update_fields["isEscalated"] = {"booleanValue": True}
+                update_fields["status"] = {"stringValue": "Escalated"}
+                update_fields["escalationReason"] = {"stringValue": str(escalation_reason or "Escalation")}
+                mask_paths.extend(["isEscalated", "status", "escalationReason"])
+
+            mask_query = "&".join([f"updateMask.fieldPaths={p}" for p in mask_paths])
+            patch_url = f"https://firestore.googleapis.com/v1/{doc_name}?{mask_query}&key={FIREBASE_API_KEY}"
+            patch_resp = requests.patch(patch_url, json={"fields": update_fields}, timeout=6)
+            return patch_resp.status_code == 200
+
+    except Exception as ex:
+        print(f"De-duplication check notice: {ex}")
+
+    # 2. No existing record found: Create new record via POST
     payload = {
         "fields": {
             "channel": {"stringValue": str(channel or "website")},
             "customerName": {"stringValue": str(customer_name or "Valued Client").strip().title()},
             "customerPhone": {"stringValue": str(clean_phone)},
             "service": {"stringValue": str(service or "Consultation Inquiry")},
-            "bookingDate": {"stringValue": sl_now.strftime("%Y-%m-%d")},
+            "bookingDate": {"stringValue": today_str},
             "bookingTime": {"stringValue": str(final_time)},
             "submissionTime": {"stringValue": str(submission_time)},
             "requestedSlot": {"stringValue": str(booking_time or "")},
@@ -308,15 +408,12 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
         }
     }
     try:
+        url = f"{base_url}/appointments?key={FIREBASE_API_KEY}"
         resp = requests.post(url, json=payload, timeout=8)
         return resp.status_code == 200
     except Exception as e:
         print(f"Error saving lead to Firestore: {e}")
         return False
-
-# ==============================================================================
-# INTELLIGENT MULTILINGUAL FALLBACK ENGINE (Sinhala, Singlish & English)
-# ==============================================================================
 
 def get_multilingual_fallback(message, is_escalated=False):
     msg_lower = message.lower()
@@ -577,13 +674,8 @@ def handle_chat():
             user_phone = phone_match.group(1)
             is_lead = True
 
-    # Smart customer name extraction from message if not authenticated
-    if user_name in ["Website Visitor", "Valued Client", ""] and message:
-        clean_name = re.sub(r'(07\d{8}|\+94\d{9}|011\d{7})', '', message)
-        clean_name = re.sub(r'(?i)\b(and|mage|nama|name|is|phone|number|whatsapp|mata|slot|ekak|booking|ona|help|please|call|me|adha|ude|hawasa)\b', '', clean_name)
-        clean_name = re.sub(r'[^a-zA-Z\s]', '', clean_name).strip()
-        if len(clean_name) >= 3 and len(clean_name.split()) <= 4:
-            user_name = clean_name.title()
+    # Smart customer name extraction with strict Singlish filter
+    user_name = extract_valid_customer_name(message, current_name=user_name)
 
     # 2. Check for Reflex Human Escalation Trigger
     is_escalated, escalation_reason = detect_escalation(message)
