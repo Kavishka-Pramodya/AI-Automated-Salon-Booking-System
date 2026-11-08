@@ -733,71 +733,155 @@ function showCustomerConfirmationAlert(title, message) {
 
 
 
-function initCustomerConfirmationMonitor() {
 
-    window.addEventListener('storage', (e) => {
+// Warning Chime (E4 + C4 low soft chime)
+function playCustomerWarningChime() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(392.00, now);
+        gain1.gain.setValueAtTime(0.25, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
 
-        if (e.key === 'chanu_last_confirmed_id' && e.newValue) {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(329.63, now + 0.15);
+        gain2.gain.setValueAtTime(0.28, now + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.15);
+        osc2.stop(now + 0.65);
+    } catch (e) {
+        console.warn('Audio notice:', e);
+    }
+}
 
-            const alertedKey = 'chanu_notified_' + e.newValue;
+function showCustomerCancellationAlert(title, message) {
+    playCustomerWarningChime();
 
-            if (!sessionStorage.getItem(alertedKey)) {
+    let toast = document.getElementById('chanuCustomerCancelAlert');
+    if (toast) toast.remove();
 
-                sessionStorage.setItem(alertedKey, 'true');
+    toast = document.createElement('div');
+    toast.id = 'chanuCustomerCancelAlert';
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 16px 20px;
+        border-radius: 16px;
+        border-left: 5px solid #ef4444;
+        box-shadow: 0 15px 35px rgba(239, 68, 68, 0.25), 0 5px 15px rgba(0,0,0,0.08);
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        max-width: 420px;
+        animation: slideInUp 0.4s ease;
+    `;
 
-                showCustomerConfirmationAlert(
+    toast.innerHTML = `
+        <div style="width: 40px; height: 40px; border-radius: 12px; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div style="flex: 1;">
+            <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: #dc2626;">${title || 'Appointment Notice: Cancelled'}</h4>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #475569; line-height: 1.4;">${message || 'Your appointment has been cancelled by salon management. Please contact reception at 070 446 8888 or message Anya to reschedule.'}</p>
+        </div>
+        <button type="button" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer;" onclick="this.closest('#chanuCustomerCancelAlert').remove();">&times;</button>
+    `;
 
-                    'Appointment Confirmed! 🎉',
+    document.body.appendChild(toast);
 
-                    'Your appointment at Chanu Salon has been officially confirmed by our Salon Director.'
+    // Append to Anya chatbot window if open
+    const chatBody = document.getElementById('aiChatBody');
+    if (chatBody) {
+        const botNotice = document.createElement('div');
+        botNotice.className = 'ai-msg bot';
+        botNotice.style.background = '#fef2f2';
+        botNotice.style.border = '1px solid #fecaca';
+        botNotice.style.color = '#991b1b';
+        botNotice.innerHTML = `<strong><i class="fas fa-times-circle" style="color: #dc2626;"></i> Appointment Notice:</strong> Your booking has been cancelled by Chanu Salon Management. If you'd like to pick another time slot or speak with us, please message me here or call reception at 070 446 8888! 🌸`;
+        chatBody.appendChild(botNotice);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
 
-                );
-
-            }
-
+    setTimeout(() => {
+        if (toast && toast.parentElement) {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.4s';
+            setTimeout(() => toast.remove(), 400);
         }
+    }, 12000);
+}
 
+function initCustomerConfirmationMonitor() {
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'chanu_last_confirmed_id' && e.newValue) {
+            const alertedKey = 'chanu_notified_confirm_' + e.newValue;
+            if (!sessionStorage.getItem(alertedKey)) {
+                sessionStorage.setItem(alertedKey, 'true');
+                showCustomerConfirmationAlert(
+                    'Appointment Confirmed! 🎉',
+                    'Your appointment at Chanu Salon has been officially confirmed by our Salon Director.'
+                );
+            }
+        } else if (e.key === 'chanu_last_cancelled_id' && e.newValue) {
+            const alertedKey = 'chanu_notified_cancel_' + e.newValue;
+            if (!sessionStorage.getItem(alertedKey)) {
+                sessionStorage.setItem(alertedKey, 'true');
+                showCustomerCancellationAlert(
+                    'Appointment Notice: Cancelled',
+                    'Your appointment at Chanu Salon has been cancelled by salon management. Please contact reception at 070 446 8888 or message Anya to reschedule.'
+                );
+            }
+        }
     });
 
-
-
     setInterval(() => {
-
         const lastConfirmedId = localStorage.getItem('chanu_last_confirmed_id');
-
         const lastConfirmedTime = parseInt(localStorage.getItem('chanu_last_confirmed_time') || '0', 10);
-
-        
-
         if (lastConfirmedId && Date.now() - lastConfirmedTime < 60000) {
-
-            const alertedKey = 'chanu_notified_' + lastConfirmedId;
-
+            const alertedKey = 'chanu_notified_confirm_' + lastConfirmedId;
             if (!sessionStorage.getItem(alertedKey)) {
-
                 sessionStorage.setItem(alertedKey, 'true');
-
                 showCustomerConfirmationAlert(
-
                     'Appointment Confirmed! 🎉',
-
                     'Your appointment at Chanu Salon has been officially confirmed by our Salon Director.'
-
                 );
-
             }
-
         }
 
-    }, 4000);
-
+        const lastCancelledId = localStorage.getItem('chanu_last_cancelled_id');
+        const lastCancelledTime = parseInt(localStorage.getItem('chanu_last_cancelled_time') || '0', 10);
+        if (lastCancelledId && Date.now() - lastCancelledTime < 60000) {
+            const alertedKey = 'chanu_notified_cancel_' + lastCancelledId;
+            if (!sessionStorage.getItem(alertedKey)) {
+                sessionStorage.setItem(alertedKey, 'true');
+                showCustomerCancellationAlert(
+                    'Appointment Notice: Cancelled',
+                    'Your appointment at Chanu Salon has been cancelled by salon management. Please contact reception at 070 446 8888 or message Anya to reschedule.'
+                );
+            }
+        }
+    }, 3000);
 }
-
-
 
 if (typeof window !== 'undefined') {
-
     initCustomerConfirmationMonitor();
-
 }
-
