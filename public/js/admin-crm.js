@@ -4,6 +4,44 @@
 let unsubscribeListener = null;
 let allAppointments = [];
 let activeFilter = 'all';
+let isTodayFilterActive = true; // Default ticked as requested
+
+function getTodayDateSLST() {
+    try {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Colombo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
+    } catch (e) {
+        return new Date().toISOString().split('T')[0];
+    }
+}
+
+function isItemToday(item, todayStr) {
+    if (!item) return false;
+    if (item.bookingDate === todayStr) return true;
+    if (item.createdAt && typeof item.createdAt === 'string' && item.createdAt.startsWith(todayStr)) return true;
+    return false;
+}
+
+window.handleTodayToggle = function(isChecked) {
+    isTodayFilterActive = !!isChecked;
+    const btn = document.getElementById('todayFilterBtn');
+    if (btn) {
+        if (isTodayFilterActive) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+    const chk = document.getElementById('todayFilterCheckbox');
+    if (chk && chk.checked !== isTodayFilterActive) {
+        chk.checked = isTodayFilterActive;
+    }
+    renderCRMTable();
+};
 
 // Default Admin Seed
 const DEFAULT_ADMIN = {
@@ -661,23 +699,38 @@ function renderCRMTable() {
     const tableBody = document.getElementById('crmTableBody');
     if (!tableBody) return;
 
+    const todayStr = getTodayDateSLST();
+
+    // 1. Update Today's Count Badge
+    const todayTotalCount = allAppointments.filter(x => isItemToday(x, todayStr)).length;
+    const todayBadge = document.getElementById('todayCountBadge');
+    if (todayBadge) todayBadge.textContent = todayTotalCount;
+
     let filtered = allAppointments;
+
+    // 2. Channel / Status Filter
     if (activeFilter === 'website') {
-        filtered = allAppointments.filter(x => x.channel === 'website');
+        filtered = filtered.filter(x => x.channel === 'website');
     } else if (activeFilter === 'whatsapp') {
-        filtered = allAppointments.filter(x => x.channel === 'whatsapp');
+        filtered = filtered.filter(x => x.channel === 'whatsapp');
     } else if (activeFilter === 'confirmed') {
-        filtered = allAppointments.filter(x => x.status === 'Confirmed');
+        filtered = filtered.filter(x => x.status === 'Confirmed');
     } else if (activeFilter === 'escalated') {
-        filtered = allAppointments.filter(x => x.isEscalated === true || x.status === 'Escalated');
+        filtered = filtered.filter(x => x.isEscalated === true || x.status === 'Escalated');
+    }
+
+    // 3. Today Filter (Checked/Active by default)
+    if (isTodayFilterActive) {
+        filtered = filtered.filter(x => isItemToday(x, todayStr));
     }
 
     if (filtered.length === 0) {
+        const streamContext = isTodayFilterActive ? `for Today (${todayStr})` : 'in this stream';
         tableBody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align: center; padding: 40px; color: #94a3b8;">
                     <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
-                    No appointments or leads found in this stream.
+                    No appointments or leads found ${streamContext}.
                 </td>
             </tr>
         `;
