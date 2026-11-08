@@ -321,7 +321,7 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
 
     initial_status = "Escalated" if is_escalated else "Pending"
     submission_time = sl_now.strftime("%H:%M")
-    final_time = booking_time if booking_time else submission_time
+    final_time = submission_time
 
     # 1. Lead De-duplication: Check if active record exists for this phone today
     try:
