@@ -1307,6 +1307,45 @@ body::after {
     }
 }
 
+/* ==========================================================================
+   Appointment Detail Modal Glassmorphism
+   ========================================================================== */
+#bookingDetailModal .auth-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.24) 100%) !important;
+    backdrop-filter: blur(36px) saturate(210%) !important;
+    -webkit-backdrop-filter: blur(36px) saturate(210%) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+    box-shadow: 0 35px 85px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+#bookingDetailModal .bm-modal-grid > div {
+    background: rgba(255, 255, 255, 0.44) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+#bookingDetailModal div[style*="background: #fff1f2"],
+#bookingDetailModal div[style*="background:#fff1f2"] {
+    background: rgba(254, 226, 226, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(244, 114, 182, 0.45) !important;
+    border-radius: 14px !important;
+}
+
+#bookingDetailModal button[onclick="closeBookingDetailModal()"] {
+    background: rgba(255, 255, 255, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+#bookingDetailModal button[onclick="closeBookingDetailModal()"]:hover {
+    background: rgba(255, 255, 255, 0.75) !important;
+}
+
 @media (max-width: 600px) {
     .stats-grid {
         grid-template-columns: 1fr !important;
