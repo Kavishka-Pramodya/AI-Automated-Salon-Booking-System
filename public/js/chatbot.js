@@ -214,6 +214,15 @@ window.toggleAIChat = function() {
 
     if (modal.classList.contains('active')) {
 
+        const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
+        if (user && (user.fullName || user.username) && (!window._chanuChatHistory || window._chanuChatHistory.length === 0)) {
+            const initialBotBubble = document.querySelector('#aiChatBody .ai-msg.bot');
+            if (initialBotBubble) {
+                const displayName = escapeHtml(user.fullName || user.username);
+                initialBotBubble.innerHTML = `Hello <strong>${displayName}</strong>! 🌸 Welcome back to your Chanu Salon Sanctuary. As our valued registered member, how may I assist you with your styling, treatments, or scheduling today?`;
+            }
+        }
+
         const input = document.getElementById('aiInput');
 
         if (input) setTimeout(() => input.focus(), 250);
@@ -292,7 +301,8 @@ window.requestCallbackLead = function() {
 
                 phone: user.phone,
 
-                is_lead: true
+                is_lead: true,
+                is_authenticated: true
 
             })
 
@@ -464,7 +474,8 @@ window.sendAIMessage = async function() {
         history: window._chanuChatHistory.slice(-10),
         name: activeName,
         phone: activePhone,
-        is_lead: isActivelyProvidedLead
+        is_lead: isActivelyProvidedLead,
+        is_authenticated: !!(user && user.phone)
     };
 
 

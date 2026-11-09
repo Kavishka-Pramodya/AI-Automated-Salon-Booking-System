@@ -119,11 +119,12 @@ def extract_time_intent(text):
     return ""
 
 def extract_service_intent(text, history=None):
-    """Detects service name and estimated price from current message or conversation history."""
+    """Detects service name and estimated price strictly from USER messages."""
     combined = (text or "").lower()
     if history and isinstance(history, list):
         for h in history:
-            combined += " " + (h.get("content", "") or "").lower()
+            if h.get("role") in ["user", "client"]:
+                combined += " " + (h.get("content", "") or "").lower()
 
     if any(k in combined for k in ["color", "colour", "balayage", "ombre", "highlight"]):
         return "Balayage, Ombre & Creative Color", 5000
@@ -187,7 +188,14 @@ def detect_escalation(text):
         "director", "disappointed", "poor experience", "damaged my hair", 
         "horrible", "waste of money", "call me immediately", "sathiyak giya", 
         "katha karanna ona", "naduwak", "palaweni wathawa nemei", "salli ona", 
-        "manager ekka katha", "waradi", "awul", "salli apahu"
+        "manager ekka katha", "waradi", "awul", "salli apahu",
+        "waste", "time waste", "waste una", "waste of time", "time eka waste",
+        "rasthiyadu", "rasthiyaduwa", "aparade", "parakku", "welawe", "chater", 
+        "chaa", "cha", "boruwak", "boruwa", "pissu", "weradi", "warada", "padui", 
+        "padu", "asaranai", "epa una", "mala panala", "tharahai", "taraha", 
+        "hari na", "hari naha", "wadak na", "wadak naha", "late", "delayed", 
+        "delay", "waiting too long", "unacceptable", "scam", "cheat",
+        "නාස්ති", "කාලය නාස්ති", "පරක්කු", "අවුල්", "සල්ලි", "නඩු", "වරද", "නරක", "අසාධාරණ", "කළමනාකරු", "මැසේජ්"
     ]
     for kw in escalation_keywords:
         if kw in text_lower:
@@ -373,8 +381,10 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
             if is_escalated:
                 update_fields["isEscalated"] = {"booleanValue": True}
                 update_fields["status"] = {"stringValue": "Escalated"}
+                update_fields["service"] = {"stringValue": "URGENT: Customer Escalation Case"}
+                update_fields["price"] = {"integerValue": "0"}
                 update_fields["escalationReason"] = {"stringValue": str(escalation_reason or "Escalation")}
-                mask_paths.extend(["isEscalated", "status", "escalationReason"])
+                mask_paths.extend(["isEscalated", "status", "service", "price", "escalationReason"])
 
             mask_query = "&".join([f"updateMask.fieldPaths={p}" for p in mask_paths])
             patch_url = f"https://firestore.googleapis.com/v1/{doc_name}?{mask_query}&key={FIREBASE_API_KEY}"
@@ -663,6 +673,7 @@ def handle_chat():
     user_name = req_data.get("name", "").strip() or req_data.get("customerName", "Website Visitor")
     user_phone = req_data.get("phone", "").strip() or req_data.get("customerPhone", "")
     is_lead = req_data.get("is_lead", False)
+    is_auth_from_client = req_data.get("is_authenticated", False)
 
     if not message:
         return jsonify({"reply": "Hello gorgeous! ✨ How can I assist you with your salon booking or beauty inquiries today? (මට සිංහලෙන්ද උදව් කළ හැක!)"})
@@ -680,23 +691,71 @@ def handle_chat():
     # 2. Check for Reflex Human Escalation Trigger
     is_escalated, escalation_reason = detect_escalation(message)
 
-    # 3. Smart Entity Extraction (Slot Time, Service, and Estimated Price)
+    # 3. Smart Entity Extraction (Slot Time, Service, and Estimated Price) strictly from user intent
     detected_time = extract_time_intent(message)
     detected_service, detected_price = extract_service_intent(message, history)
 
     is_booking_intent = bool(detected_time) or any(k in message.lower() for k in [
         "book", "slot", "welawe", "welawa", "appointment", "reserve", "date", "time", "help krnn"
     ])
-    stage = "Prospect" if is_booking_intent else "Lead"
 
-    final_service = detected_service if detected_service != "Website AI Concierge Inquiry" else (
-        "Website AI Concierge Inquiry" if not is_escalated else "URGENT: Customer Escalation Case"
-    )
+    if is_escalated:
+        final_service = "URGENT: Customer Escalation Case"
+        detected_price = 0
+        stage = "Escalation"
+    else:
+        final_service = detected_service
+        stage = "Prospect" if is_booking_intent else "Lead"
 
-    # Only save lead if a valid phone exists AND (it was actively provided, or booking/escalation intent exists)
-    lead_saved = False
+    # 4. Generate Grounded AI Response with Authenticated Client Context & Live Slots
+    live_slot_context = get_live_slot_context()
     clean_user_phone = normalize_phone(user_phone)
-    if clean_user_phone and (is_lead or is_escalated or is_booking_intent):
+    is_auth_client = bool(clean_user_phone and user_name and user_name not in ["Website Visitor", "Valued Client", "Guest"]) or is_auth_from_client
+
+    client_context = ""
+    if is_auth_client and clean_user_phone:
+        client_context = f"""
+[AUTHENTICATED CLIENT CONTEXT]
+- Client Status: LOGGED IN & REGISTERED MEMBER
+- Client Full Name: {user_name}
+- Client Mobile/WhatsApp: {clean_user_phone}
+- MANDATORY CRM INSTRUCTION:
+  1. This client is ALREADY logged in and their profile is fully registered in our CRM!
+  2. Greet and address them warmly by their name ({user_name}).
+  3. NEVER ask for their name, phone number, or WhatsApp number again under ANY circumstance!
+  4. If they request a slot booking, callback, or complain, immediately proceed using their contact ({clean_user_phone}) on file!
+"""
+    elif clean_user_phone:
+        client_context = f"""
+[CLIENT CONTACT CONTEXT]
+- Client Mobile/WhatsApp on file: {clean_user_phone}
+- Do NOT ask for their phone number again since it is already on file.
+"""
+
+    prompt_parts = [SALON_AGENT_PROMPT]
+    if client_context:
+        prompt_parts.append(client_context)
+    if live_slot_context:
+        prompt_parts.append(live_slot_context)
+    grounded_prompt = "\n\n".join(prompt_parts)
+
+    ai_reply = query_gemini(message, grounded_prompt, history=history)
+    if not ai_reply:
+        ai_reply = get_multilingual_fallback(message, is_escalated=is_escalated)
+
+    # 5. Catch AI Response Escalation (If Gemini naturally escalated to director)
+    if not is_escalated and ai_reply and any(k in ai_reply.lower() for k in [
+        "director", "escalat", "inform our salon", "inform the salon", "salon directorta", "salon director"
+    ]):
+        is_escalated = True
+        escalation_reason = f"AI Concierge Escalated: '{message}'"
+        final_service = "URGENT: Customer Escalation Case"
+        detected_price = 0
+        stage = "Escalation"
+
+    # 6. Save or Update Lead in Firestore with Strict Escalation Guard
+    lead_saved = False
+    if clean_user_phone and (is_lead or is_escalated or is_booking_intent or is_auth_client):
         lead_saved = save_lead_to_firestore(
             channel="website",
             customer_name=user_name,
@@ -709,14 +768,6 @@ def handle_chat():
             stage=stage,
             booking_time=detected_time
         )
-
-    # 4. Generate Grounded AI Response with Live Real-Time Slot Awareness
-    live_slot_context = get_live_slot_context()
-    grounded_prompt = (SALON_AGENT_PROMPT + "\n" + live_slot_context) if live_slot_context else SALON_AGENT_PROMPT
-
-    ai_reply = query_gemini(message, grounded_prompt, history=history)
-    if not ai_reply:
-        ai_reply = get_multilingual_fallback(message, is_escalated=is_escalated)
 
     return jsonify({
         "reply": ai_reply,

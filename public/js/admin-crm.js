@@ -830,12 +830,29 @@ function buildCustomer360Profiles() {
             profile.totalSpend += Number(item.price || 0);
         }
 
+        const stopNameWords = new Set([
+            "ow", "na", "ne", "ehema", "krl", "krla", "karala", "denna", "dennam", "danna", 
+            "mona", "magulakda", "magulkda", "appa", "puluwanda", "bari", "kiyakda", "kiyada", 
+            "kiyanna", "bada", "hari", "kamak", "welawe", "welawa", "kohomada", "meka", "thawa", 
+            "mata", "ona", "ane", "manda", "mokakda", "kawadada", "help", "thanks"
+        ]);
+        const isLegitClientName = (nm) => {
+            if (!nm || typeof nm !== 'string') return false;
+            const t = nm.trim();
+            if (!t || ['Website Visitor', 'Valued Client', 'Client', 'Salon Administrator', 'VIP Client'].includes(t)) return false;
+            const words = t.toLowerCase().split(/\s+/);
+            if (words.some(w => stopNameWords.has(w))) return false;
+            return words.length >= 1;
+        };
+
         if (item.bookingDate && item.bookingDate >= profile.lastDate) {
             profile.lastDate = item.bookingDate;
             profile.lastService = item.service || profile.lastService;
-            if (item.customerName && item.customerName !== 'Website Visitor') {
+            if (isLegitClientName(item.customerName)) {
                 profile.name = item.customerName;
             }
+        } else if (!isLegitClientName(profile.name) && isLegitClientName(item.customerName)) {
+            profile.name = item.customerName;
         }
     });
 
