@@ -417,6 +417,9 @@
 
         function logoutUser() {
             localStorage.removeItem('chanu_user');
+            localStorage.removeItem('chanu_client_phone');
+            localStorage.removeItem('chanu_client_name');
+            sessionStorage.removeItem('chanu_chat_history');
             sessionStorage.removeItem('chanu_admin_auth');
             sessionStorage.removeItem('admin_auth');
             window.location.reload();

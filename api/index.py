@@ -693,13 +693,14 @@ def handle_chat():
         "Website AI Concierge Inquiry" if not is_escalated else "URGENT: Customer Escalation Case"
     )
 
-    # If contact available or escalation triggered, save directly to Firestore
+    # Only save lead if a valid phone exists AND (it was actively provided, or booking/escalation intent exists)
     lead_saved = False
-    if is_lead or user_phone or is_escalated:
+    clean_user_phone = normalize_phone(user_phone)
+    if clean_user_phone and (is_lead or is_escalated or is_booking_intent):
         lead_saved = save_lead_to_firestore(
             channel="website",
             customer_name=user_name,
-            customer_phone=user_phone,
+            customer_phone=clean_user_phone,
             service=final_service,
             inquiry_text=message,
             price=detected_price,

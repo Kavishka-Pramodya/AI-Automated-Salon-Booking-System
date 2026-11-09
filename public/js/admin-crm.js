@@ -106,10 +106,10 @@ window.loginAdmin = function(e) {
 window.logoutAdmin = function() {
     sessionStorage.removeItem('chanu_admin_auth');
     sessionStorage.removeItem('admin_auth');
-    const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
-    if (user && user.role === 'Admin') {
-        localStorage.removeItem('chanu_user');
-    }
+    localStorage.removeItem('chanu_user');
+    localStorage.removeItem('chanu_client_phone');
+    localStorage.removeItem('chanu_client_name');
+    sessionStorage.removeItem('chanu_chat_history');
     if (unsubscribeListener) unsubscribeListener();
     window.location.href = 'login.html';
 };

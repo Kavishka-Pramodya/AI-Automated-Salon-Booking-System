@@ -445,22 +445,26 @@ window.sendAIMessage = async function() {
 
     const user = JSON.parse(localStorage.getItem('chanu_user') || 'null');
 
-    const storedPhone = localStorage.getItem('chanu_client_phone') || '';
+    // Only attach user info if logged in, OR if user actually provided phone in current conversation
+    let activePhone = "";
+    let activeName = "Website Visitor";
+    let isActivelyProvidedLead = false;
 
-    const storedName = localStorage.getItem('chanu_client_name') || '';
-
-
+    if (user && user.phone) {
+        activePhone = user.phone;
+        activeName = user.fullName || user.username || "Client";
+    } else if (phoneMatch) {
+        activePhone = phoneMatch[1];
+        activeName = detectedName || "Website Visitor";
+        isActivelyProvidedLead = true;
+    }
 
     const payload = {
-
         message: text,
-
         history: window._chanuChatHistory.slice(-10),
-
-        name: user ? (user.fullName || user.username) : (storedName || "Website Visitor"),
-
-        phone: user ? (user.phone || "") : storedPhone
-
+        name: activeName,
+        phone: activePhone,
+        is_lead: isActivelyProvidedLead
     };
 
 
@@ -522,13 +526,9 @@ window.sendAIMessage = async function() {
         let formatted = formatChatText(replyText);
 
         if (isEscalated) {
-
-            formatted += `<div style="margin-top: 10px; padding: 8px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 11.5px; color: #991b1b; font-weight: 700;"><i class="fas fa-shield-alt"></i> Priority Hand-Off: Your inquiry has been escalated directly to our Salon Director's CRM console.</div>`;
-
-        } else if (leadSaved) {
-
-            formatted += `<div style="margin-top: 8px; font-size: 11.5px; color: #059669; font-weight: 700;"><i class="fas fa-check-circle"></i> Your contact has been registered into our Live CRM Lead Stream!</div>`;
-
+            formatted += `<div style="margin-top: 10px; padding: 8px 12px; background: rgba(254, 242, 242, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(254, 202, 202, 0.8); border-radius: 10px; font-size: 11.5px; color: #991b1b; font-weight: 700;"><i class="fas fa-shield-alt"></i> Priority Hand-Off: Your inquiry has been escalated directly to our Salon Director's CRM console.</div>`;
+        } else if (leadSaved && (phoneMatch || (user && user.phone))) {
+            formatted += `<div style="margin-top: 8px; font-size: 11.5px; color: #059669; font-weight: 700; background: rgba(236, 253, 245, 0.85); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(167, 243, 208, 0.8); display: inline-flex; align-items: center; gap: 6px;"><i class="fas fa-check-circle"></i> Your contact has been registered into our Live CRM Lead Stream!</div>`;
         }
 
         typingDiv.innerHTML = formatted;
