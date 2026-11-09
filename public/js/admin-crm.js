@@ -478,10 +478,21 @@ function attachFirestoreListener() {
         unsubscribeListener = onSnapshot(q, (snapshot) => {
             const isFirst = isInitialSnapshot;
             snapshot.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    const data = change.doc.data();
-                    if (!isFirst && (data.status === 'Pending' || data.isEscalated)) {
-                        showAdminNewBookingToast(change.doc.id, data);
+                const data = change.doc.data();
+                const docId = change.doc.id;
+                const isEscalated = data.isEscalated === true || data.status === 'Escalated' || (data.service && data.service.includes('Escalation'));
+
+                if (!isFirst) {
+                    if (change.type === 'added') {
+                        if (isEscalated) {
+                            triggerGlobalEscalationAlert(docId, data);
+                        } else if (data.status === 'Pending') {
+                            showAdminNewBookingToast(docId, data);
+                        }
+                    } else if (change.type === 'modified') {
+                        if (isEscalated && !window._handledEscalations?.has(docId)) {
+                            triggerGlobalEscalationAlert(docId, data);
+                        }
                     }
                 }
             });
@@ -525,11 +536,20 @@ function handleEscalations() {
     const escalations = allAppointments.filter(x => x.isEscalated === true || x.status === 'Escalated');
     const badge = document.getElementById('escalatedCountBadge');
     const statBadge = document.getElementById('statEscalationsCount');
+    const navBadge = document.getElementById('navEscalationBadge');
     const banner = document.getElementById('escalationAlertBanner');
     const actionBtns = document.getElementById('escalationActionBtns');
 
     if (badge) badge.textContent = escalations.length;
     if (statBadge) statBadge.textContent = escalations.length;
+    if (navBadge) {
+        if (escalations.length > 0) {
+            navBadge.textContent = escalations.length;
+            navBadge.style.display = 'inline-block';
+        } else {
+            navBadge.style.display = 'none';
+        }
+    }
 
     if (!banner) return;
 
@@ -1325,6 +1345,168 @@ if (typeof origSwitchAdminTab === 'function') {
 }
 
 
+
+// Audio Context Unlock for Background Tab Alerts
+function initAdminAudioContext() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+            if (!window._adminAudioCtx) window._adminAudioCtx = new AudioCtx();
+            if (window._adminAudioCtx.state === 'suspended') {
+                window._adminAudioCtx.resume();
+            }
+        }
+        // Request desktop notifications if not determined
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    } catch(e) {}
+}
+document.addEventListener('click', initAdminAudioContext, { once: true });
+
+// Urgent Two-Pulse Escalation Alarm Tone (A5 -> D6 -> A5 -> E6 Siren Chime)
+window.playAdminEscalationAlarm = function() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = window._adminAudioCtx || new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+
+        const pulses = [
+            { freq: 880.00, start: 0.00, dur: 0.18, gain: 0.40, type: 'triangle' },
+            { freq: 1174.66, start: 0.20, dur: 0.28, gain: 0.45, type: 'sine' },
+            { freq: 880.00, start: 0.60, dur: 0.18, gain: 0.40, type: 'triangle' },
+            { freq: 1318.51, start: 0.80, dur: 0.42, gain: 0.50, type: 'sine' }
+        ];
+
+        pulses.forEach(p => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = p.type;
+            osc.frequency.setValueAtTime(p.freq, now + p.start);
+            g.gain.setValueAtTime(p.gain, now + p.start);
+            g.gain.exponentialRampToValueAtTime(0.001, now + p.start + p.dur);
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(now + p.start);
+            osc.stop(now + p.start + p.dur);
+        });
+    } catch(e) {
+        console.warn('Escalation audio alarm notice:', e);
+    }
+};
+
+window._handledEscalations = window._handledEscalations || new Set();
+
+// Universal Floating Global Escalation Alert Card (Visible on ALL Admin Tabs)
+window.triggerGlobalEscalationAlert = function(docId, data) {
+    if (!docId || !data) return;
+    if (window._handledEscalations.has(docId)) return;
+    window._handledEscalations.add(docId);
+
+    // 1. Play Urgent Siren / Alarm Tone
+    window.playAdminEscalationAlarm();
+
+    // 2. Flash document title across browser tabs
+    const oldTitle = document.title;
+    let flashCount = 0;
+    const titleInterval = setInterval(() => {
+        document.title = (flashCount % 2 === 0) 
+            ? "🚨 (1) URGENT ESCALATION! - Chanu Admin" 
+            : "⚠️ CUSTOMER COMPLAINT ATTENTION!";
+        flashCount++;
+        if (flashCount > 16) {
+            clearInterval(titleInterval);
+            document.title = oldTitle;
+        }
+    }, 900);
+
+    // 3. Trigger Desktop Web Notification
+    try {
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                new Notification('🚨 Urgent Salon Escalation Alert!', {
+                    body: `${data.customerName || 'Client'} (${data.customerPhone || 'Web'}): ${data.inquiry || data.escalationReason || 'Customer requires urgent assistance'}`,
+                    icon: '/images/chanu-logo.png'
+                });
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+    } catch(e) {}
+
+    // 4. Render Universal Floating Escalation Toast Banner (Visible Across ALL Tabs & Pages)
+    let banner = document.getElementById('globalEscalationToast');
+    if (banner) banner.remove();
+
+    banner = document.createElement('div');
+    banner.id = 'globalEscalationToast';
+    banner.className = 'global-escalation-alert-card';
+
+    let phone = normalizePhone(data.customerPhone || "");
+    let intlPhone = phone.startsWith('0') ? '94' + phone.substring(1) : phone;
+    const waMsg = encodeURIComponent(`Dear ${data.customerName || 'Valued Client'}, this is the Salon Director at Chanu Salon. Our AI Concierge flagged your inquiry regarding: "${data.inquiry || data.escalationReason || 'your service'}". I am personally following up to make sure you are 100% taken care of.`);
+    const waLink = `https://wa.me/${intlPhone}?text=${waMsg}`;
+
+    banner.innerHTML = `
+        <div class="gea-content-wrapper">
+            <div class="gea-icon-box">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="gea-info-box">
+                <div class="gea-badge-tag"><i class="fas fa-bullhorn"></i> URGENT CUSTOMER ESCALATION DETECTED</div>
+                <h4 class="gea-client-headline">
+                    <strong>${escapeHtml(data.customerName || 'Website Visitor')}</strong>
+                    <span class="gea-client-phone"><i class="fas fa-phone-alt"></i> ${escapeHtml(data.customerPhone || 'Not provided')}</span>
+                </h4>
+                <p class="gea-inquiry-quote">"${escapeHtml(data.inquiry || data.escalationReason || 'Customer complaint requires immediate human attention')}"</p>
+            </div>
+            <div class="gea-action-group">
+                <button type="button" class="gea-btn-view" onclick="viewEscalationInCRM('${docId}')">
+                    <i class="fas fa-external-link-alt"></i> View in CRM
+                </button>
+                <a href="${waLink}" target="_blank" class="gea-btn-wa">
+                    <i class="fab fa-whatsapp"></i> Direct WhatsApp
+                </a>
+                <button type="button" class="gea-btn-dismiss" onclick="dismissGlobalEscalationAlert()" title="Dismiss Alert">&times;</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(banner);
+};
+
+window.viewEscalationInCRM = function(docId) {
+    dismissGlobalEscalationAlert();
+    switchAdminTab('crm');
+    const pill = document.querySelector('.filter-bar button:last-child');
+    if (pill) setFilter('escalated', pill);
+
+    setTimeout(() => {
+        const rows = document.querySelectorAll('#crmTableBody tr');
+        rows.forEach(r => {
+            if (r.textContent.includes(docId) || r.textContent.includes('Escalation')) {
+                r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                r.style.transition = 'all 0.5s';
+                r.style.outline = '3px solid #e11d48';
+                r.style.background = 'rgba(254, 226, 226, 0.6)';
+                setTimeout(() => {
+                    r.style.outline = 'none';
+                }, 4000);
+            }
+        });
+    }, 400);
+};
+
+window.dismissGlobalEscalationAlert = function() {
+    const banner = document.getElementById('globalEscalationToast');
+    if (banner) {
+        banner.style.opacity = '0';
+        banner.style.transform = 'translate(-50%, -20px) scale(0.95)';
+        setTimeout(() => banner.remove(), 350);
+    }
+};
 
 // Admin Notification Audio Chime (Ascending 3-tone Concierge Bell)
 function playAdminNewBookingChime() {

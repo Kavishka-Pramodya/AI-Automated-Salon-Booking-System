@@ -1370,3 +1370,190 @@ body::after {
         padding: 18px !important;
     }
 }
+
+/* ==========================================================================
+   Universal Global Escalation Alert Card (Visible on ALL Admin Tabs)
+   ========================================================================== */
+.global-escalation-alert-card {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    max-width: 780px;
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.96) 0%, rgba(159, 18, 57, 0.96) 50%, rgba(76, 29, 149, 0.94) 100%) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border: 1.5px solid rgba(254, 205, 211, 0.85) !important;
+    border-radius: 22px !important;
+    padding: 16px 22px !important;
+    box-shadow: 0 25px 70px rgba(225, 29, 72, 0.45), 0 0 35px rgba(225, 29, 72, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+    z-index: 1000000 !important;
+    color: #ffffff !important;
+    animation: geaSlideDownBounce 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    transition: all 0.35s ease !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+@keyframes geaSlideDownBounce {
+    0% { transform: translate(-50%, -40px) scale(0.9); opacity: 0; }
+    70% { transform: translate(-50%, 4px) scale(1.02); opacity: 1; }
+    100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+}
+
+.gea-content-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.gea-icon-box {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #ffffff;
+    animation: geaAlertPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes geaAlertPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5); }
+    50% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); }
+}
+
+.gea-info-box {
+    flex: 1 1 320px;
+}
+
+.gea-badge-tag {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #fecdd3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.gea-client-headline {
+    font-size: 16px;
+    margin: 0 0 4px 0;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: #ffffff !important;
+}
+
+.gea-client-phone {
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.28);
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: #ffe4e6;
+}
+
+.gea-inquiry-quote {
+    font-size: 13px;
+    margin: 0;
+    color: #fff1f2;
+    font-style: italic;
+    opacity: 0.95;
+    line-height: 1.4;
+}
+
+.gea-action-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.gea-btn-view {
+    background: #ffffff !important;
+    color: #9f1239 !important;
+    font-weight: 700 !important;
+    font-size: 12.5px !important;
+    border: none !important;
+    padding: 9px 16px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+}
+
+.gea-btn-view:hover {
+    background: #fff1f2 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2) !important;
+}
+
+.gea-btn-wa {
+    background: #25d366 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 12.5px !important;
+    border: none !important;
+    padding: 9px 16px !important;
+    border-radius: 10px !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35) !important;
+}
+
+.gea-btn-wa:hover {
+    background: #1eb956 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 18px rgba(37, 211, 102, 0.45) !important;
+}
+
+.gea-btn-dismiss {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    line-height: 1 !important;
+}
+
+.gea-btn-dismiss:hover {
+    background: rgba(255, 255, 255, 0.4) !important;
+    transform: scale(1.08) !important;
+}
+
+/* Sidebar escalation badge */
+.sidebar-badge-escalation {
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 99px;
+    margin-left: auto;
+    animation: alertPulse 1.2s infinite ease-in-out;
+}
