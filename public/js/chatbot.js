@@ -538,7 +538,7 @@ window.sendAIMessage = async function() {
 
         if (isEscalated) {
             formatted += `<div style="margin-top: 10px; padding: 8px 12px; background: rgba(254, 242, 242, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(254, 202, 202, 0.8); border-radius: 10px; font-size: 11.5px; color: #991b1b; font-weight: 700;"><i class="fas fa-shield-alt"></i> Priority Hand-Off: Your inquiry has been escalated directly to our Salon Director's CRM console.</div>`;
-        } else if (leadSaved && (phoneMatch || (user && user.phone))) {
+        } else if (leadSaved && phoneMatch && (!user || !user.phone)) {
             formatted += `<div style="margin-top: 8px; font-size: 11.5px; color: #059669; font-weight: 700; background: rgba(236, 253, 245, 0.85); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(167, 243, 208, 0.8); display: inline-flex; align-items: center; gap: 6px;"><i class="fas fa-check-circle"></i> Your contact has been registered into our Live CRM Lead Stream!</div>`;
         }
 

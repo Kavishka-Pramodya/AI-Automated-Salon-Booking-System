@@ -755,7 +755,21 @@ def handle_chat():
 
     # 6. Save or Update Lead in Firestore with Strict Escalation Guard
     lead_saved = False
-    if clean_user_phone and (is_lead or is_escalated or is_booking_intent or is_auth_client):
+    greetings = {"hy", "hi", "hello", "hey", "ayubowan", "good morning", "good evening", "good afternoon", "halo", "hallo"}
+    msg_cleaned = re.sub(r'[^a-zA-Z\s]', '', message.lower()).strip()
+    is_simple_greeting = msg_cleaned in greetings or (len(msg_cleaned.split()) <= 2 and any(g in msg_cleaned.split() for g in greetings))
+
+    should_save = False
+    if is_escalated:
+        should_save = True
+    elif is_booking_intent:
+        should_save = True
+    elif is_lead:
+        should_save = True
+    elif is_auth_client and not is_simple_greeting:
+        should_save = True
+
+    if clean_user_phone and should_save:
         lead_saved = save_lead_to_firestore(
             channel="website",
             customer_name=user_name,
