@@ -6,10 +6,12 @@
     --crm-primary: #db2777;
     --crm-pink: #ec4899;
     --crm-gradient: linear-gradient(135deg, #ec4899 0%, #e11d48 50%, #f97316 100%);
-    --crm-bg: #f8fafc;
-    --crm-sidebar: #0f172a;
-    --crm-card: #ffffff;
-    --crm-border: #e2e8f0;
+    --crm-bg: #f4f6fb;
+    --crm-sidebar: rgba(15, 23, 42, 0.84);
+    --crm-card: rgba(255, 255, 255, 0.74);
+    --crm-border: rgba(255, 255, 255, 0.85);
+    --crm-glass-blur: blur(24px) saturate(190%);
+    --crm-glass-shadow: 0 14px 44px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
     --font-heading: 'Playfair Display', Georgia, serif;
     --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -22,10 +24,45 @@
 
 body {
     font-family: var(--font-body);
-    background-color: var(--crm-bg);
+    background: radial-gradient(at 0% 0%, rgba(244, 114, 182, 0.16) 0px, transparent 45%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 40%),
+                radial-gradient(at 50% 100%, rgba(251, 146, 60, 0.10) 0px, transparent 45%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.10) 0px, transparent 40%),
+                #f4f6fb;
+    background-attachment: fixed;
     color: #0f172a;
     display: flex;
     min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: -120px;
+    left: 15%;
+    width: 520px;
+    height: 520px;
+    background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, rgba(236, 72, 153, 0) 70%);
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    bottom: -100px;
+    right: 5%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(147, 51, 234, 0.12) 0%, rgba(59, 130, 246, 0.08) 40%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* 1. Admin Auth Overlay */
@@ -41,13 +78,16 @@ body {
 }
 
 .auth-card {
-    background: #ffffff;
-    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 26px;
     padding: 40px 32px;
     max-width: 400px;
     width: 100%;
     text-align: center;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 35px 85px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 .auth-crown {
@@ -108,16 +148,19 @@ body {
 /* 2. Sidebar */
 .sidebar {
     width: 260px;
-    background: var(--crm-sidebar);
+    background: rgba(15, 23, 42, 0.84);
+    backdrop-filter: blur(26px) saturate(180%);
+    -webkit-backdrop-filter: blur(26px) saturate(180%);
     color: #ffffff;
     padding: 24px 16px;
     position: fixed;
     height: 100%;
     overflow-y: auto;
     z-index: 100;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
+    box-shadow: 8px 0 35px rgba(0, 0, 0, 0.18);
 }
 
 .sidebar-brand {
@@ -199,18 +242,22 @@ body {
     padding: 24px 32px 50px;
     flex-grow: 1;
     max-width: calc(100vw - 260px);
+    position: relative;
+    z-index: 1;
 }
 
 .top-bar {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.74);
+    backdrop-filter: blur(22px) saturate(190%);
+    -webkit-backdrop-filter: blur(22px) saturate(190%);
     padding: 16px 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 10px 35px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95);
     margin-bottom: 28px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-radius: 16px;
-    border: 1px solid var(--crm-border);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 .top-bar h1 {
@@ -274,18 +321,21 @@ body {
 }
 
 .stat-card {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(22px) saturate(190%);
+    -webkit-backdrop-filter: blur(22px) saturate(190%);
     padding: 22px 24px;
-    border-radius: 18px;
-    border: 1px solid var(--crm-border);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
     border-top: 4px solid var(--crm-primary);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
-    transition: all 0.25s ease;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
 .stat-card.blue { border-top-color: #3b82f6; }
@@ -310,11 +360,13 @@ body {
 
 /* 5. CRM Table & Filters */
 .crm-card {
-    background: #ffffff;
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.74);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border-radius: 22px;
     padding: 26px;
-    border: 1px solid var(--crm-border);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 14px 44px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .crm-card-header {
@@ -455,10 +507,12 @@ body {
     max-height: 560px;
     overflow-y: auto;
     overflow-x: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.02);
 }
 
 .crm-stream-scrollable-container .crm-table {
@@ -471,9 +525,11 @@ body {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    background: rgba(248, 250, 252, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 2px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 /* Sleek Scrollbars */
@@ -681,14 +737,16 @@ body {
 .form-input, .form-select, .form-textarea {
     width: 100%;
     padding: 11px 14px;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 12px;
     font-size: 13.5px;
     font-family: inherit;
     color: #0f172a;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.25s ease;
 }
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
@@ -796,16 +854,18 @@ body {
 
 /* 1. The Reflexes: Urgent Human Escalation Banner */
 .escalation-banner {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 1px solid #f87171;
+    background: linear-gradient(135deg, rgba(254, 242, 242, 0.88) 0%, rgba(254, 226, 226, 0.88) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(248, 113, 113, 0.6);
     border-left: 6px solid #dc2626;
-    border-radius: 16px;
+    border-radius: 18px;
     padding: 16px 20px;
     margin-bottom: 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.08);
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     animation: pulseBorder 2s infinite ease-in-out;
 }
 
@@ -847,9 +907,11 @@ body {
 
 /* 2. The Senses: Data Health & Quality Bar */
 .data-health-widget {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 18px;
     padding: 16px 20px;
     margin-bottom: 24px;
     display: flex;
@@ -857,6 +919,7 @@ body {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 16px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .health-meter-container {
@@ -966,13 +1029,16 @@ body {
 .c360-drawer {
     width: 100%;
     max-width: 580px;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.86);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
     height: 100%;
-    box-shadow: -10px 0 35px rgba(0, 0, 0, 0.25);
+    box-shadow: -15px 0 50px rgba(15, 23, 42, 0.25);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border-left: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 @keyframes slideInRight {
@@ -1024,11 +1090,14 @@ body {
 }
 
 .c360-metric-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 14px;
     padding: 12px;
     text-align: center;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
 }
 
 .c360-metric-card .num {
@@ -1055,15 +1124,18 @@ body {
 }
 
 .c360-history-item {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
     border-left: 4px solid var(--crm-primary);
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
 }
 
 .c360-case-card {

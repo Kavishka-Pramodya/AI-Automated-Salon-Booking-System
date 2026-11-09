@@ -62,13 +62,13 @@ body {
     z-index: 10;
     width: 100%;
     max-width: 480px;
-    background: var(--auth-card);
-    border: 1px solid var(--auth-border);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(32px) saturate(190%);
+    -webkit-backdrop-filter: blur(32px) saturate(190%);
     border-radius: 28px;
     padding: 44px 38px;
-    box-shadow: 0 35px 80px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 35px 85px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22);
     animation: authFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
