@@ -156,7 +156,7 @@ try {
 
                 <div class="ai-modal-footer">
 
-                    <input type="text" id="aiInput" placeholder="Ask in English or සිංහලෙන් (e.g. කොණ්ඩේ කපන්න කීයද?)..." onkeypress="handleAIKeyPress(event)" autocomplete="off">
+                    <input type="text" id="aiInput" placeholder="Ask in English or සිංහල" onkeypress="handleAIKeyPress(event)" autocomplete="off">
 
                     <button onclick="sendAIMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
 
