@@ -106,6 +106,28 @@ Rules:
 """
 
 
+CONVERSATIONAL_ACK_WORDS = {
+    "ok", "okay", "hri", "hari", "thanks", "thank you", "thank u", "thx", 
+    "fine", "noted", "cool", "alright", "all right", "ela", "sure", 
+    "kamak na", "kamak ne", "ow", "yes", "no problem", "great", "welcome",
+    "done", "understood", "theruna", "therenawa", "ela kiri", "elakiri",
+    "hari ehenam", "hri ehenm", "hari eka", "ok eka", "okay eka"
+}
+
+def is_conversational_ack(text):
+    """Detects if message is a short conversational acknowledgment/closer rather than an inquiry or complaint."""
+    if not text:
+        return False
+    clean = re.sub(r'[^a-zA-Z\s]', '', str(text).lower()).strip()
+    words = clean.split()
+    if clean in CONVERSATIONAL_ACK_WORDS:
+        return True
+    if len(words) <= 3 and any(w in CONVERSATIONAL_ACK_WORDS for w in words):
+        service_keywords = ["facial", "hair", "cut", "color", "bridal", "keratin", "botox", "book", "slot", "appointment", "parakku", "waste", "problem", "complaint", "kapanne"]
+        if not any(sk in clean for sk in service_keywords):
+            return True
+    return False
+
 def extract_time_intent(text):
     """Extracts slot or appointment time from message (e.g., 10:30, 10.30 a.m, 2:00 pm)."""
     if not text:
@@ -120,23 +142,29 @@ def extract_time_intent(text):
 
 def extract_service_intent(text, history=None):
     """Detects service name and estimated price strictly from USER messages."""
+    # If the current message is a pure greeting or acknowledgment, don't invent a service from history!
+    if is_conversational_ack(text) or (text and text.lower().strip() in {"hy", "hi", "hello", "hey", "ayubowan"}):
+        return "Website AI Concierge Inquiry", 0
+
     combined = (text or "").lower()
     if history and isinstance(history, list):
         for h in history:
             if h.get("role") in ["user", "client"]:
-                combined += " " + (h.get("content", "") or "").lower()
+                h_text = (h.get("content", "") or "").lower()
+                if not is_conversational_ack(h_text):
+                    combined += " " + h_text
 
-    if any(k in combined for k in ["color", "colour", "balayage", "ombre", "highlight"]):
+    if re.search(r'\b(color|colour|balayage|ombre|highlight)\b', combined, re.I):
         return "Balayage, Ombre & Creative Color", 5000
-    elif any(k in combined for k in ["facial", "skin", "clean up", "glow"]):
+    elif re.search(r'\b(facial|skin|clean up|skin glow)\b', combined, re.I):
         return "Botanical Gold & Diamond Facial", 3000
-    elif any(k in combined for k in ["bridal", "dressing", "manali"]):
+    elif re.search(r'\b(bridal|dressing|manali)\b', combined, re.I):
         return "Royal Bridal Dressing", 15000
-    elif any(k in combined for k in ["keratin", "botox", "straight"]):
+    elif re.search(r'\b(keratin|hair botox|rebonding|straightening|relaxing)\b', combined, re.I):
         return "Keratin & Hair Botox Therapy", 7500
-    elif any(k in combined for k in ["mani", "pedi", "nail"]):
+    elif re.search(r'\b(manicure|pedicure|nail art|mani|pedi)\b', combined, re.I):
         return "Luxury Manicure & Pedicure", 2500
-    elif any(k in combined for k in ["hair", "cut", "konde", "trim", "styling"]):
+    elif re.search(r'\b(haircut|hair cut|styling|konde|trim)\b', combined, re.I):
         return "Couture Hair Cutting & Styling", 1500
     return "Website AI Concierge Inquiry", 0
 
@@ -352,15 +380,29 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
             doc_name = existing_doc["name"]
             existing_fields = existing_doc.get("fields", {})
             existing_name = existing_fields.get("customerName", {}).get("stringValue", "")
+            existing_status = existing_fields.get("status", {}).get("stringValue", "")
+            existing_is_escalated = existing_fields.get("isEscalated", {}).get("booleanValue", False) or existing_status == "Escalated"
+            existing_inquiry = existing_fields.get("inquiry", {}).get("stringValue", "")
             
             # Protect legitimate customer name from being overwritten by defaults or empty values
             best_name = customer_name if (customer_name and customer_name not in ["Website Visitor", "Valued Client"]) else (existing_name or "Valued Client")
             
             update_fields = {
-                "inquiry": {"stringValue": str(inquiry_text or "")},
                 "updatedAt": {"stringValue": sl_now.isoformat()}
             }
-            mask_paths = ["inquiry", "updatedAt"]
+            mask_paths = ["updatedAt"]
+
+            # Only update inquiry if new message is NOT a conversational filler/acknowledgment (e.g. 'okay', 'thanks', 'hari')
+            if inquiry_text and not is_conversational_ack(inquiry_text):
+                if existing_is_escalated and not is_escalated:
+                    # An active escalation is already registered; do NOT wipe out the original complaint!
+                    if len(inquiry_text.strip()) > 10 and inquiry_text.strip().lower() not in existing_inquiry.lower():
+                        combined_inquiry = f"{existing_inquiry} | Follow-up Note: {inquiry_text.strip()}"
+                        update_fields["inquiry"] = {"stringValue": combined_inquiry}
+                        mask_paths.append("inquiry")
+                else:
+                    update_fields["inquiry"] = {"stringValue": str(inquiry_text)}
+                    mask_paths.append("inquiry")
 
             if best_name and best_name != existing_name:
                 update_fields["customerName"] = {"stringValue": str(best_name).strip().title()}
@@ -370,14 +412,6 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
                 update_fields["requestedSlot"] = {"stringValue": str(booking_time)}
                 mask_paths.append("requestedSlot")
 
-            if service and service not in ["Website AI Concierge Inquiry", "Consultation Inquiry"]:
-                update_fields["service"] = {"stringValue": str(service)}
-                mask_paths.append("service")
-
-            if price and int(price) > 0:
-                update_fields["price"] = {"integerValue": str(int(price))}
-                mask_paths.append("price")
-
             if is_escalated:
                 update_fields["isEscalated"] = {"booleanValue": True}
                 update_fields["status"] = {"stringValue": "Escalated"}
@@ -385,6 +419,15 @@ def save_lead_to_firestore(channel, customer_name, customer_phone, service, inqu
                 update_fields["price"] = {"integerValue": "0"}
                 update_fields["escalationReason"] = {"stringValue": str(escalation_reason or "Escalation")}
                 mask_paths.extend(["isEscalated", "status", "service", "price", "escalationReason"])
+            elif not existing_is_escalated:
+                # Strictly protect Escalation cases: never let non-escalation updates overwrite an Escalated ticket's service & price!
+                if service and service not in ["Website AI Concierge Inquiry", "Consultation Inquiry"]:
+                    update_fields["service"] = {"stringValue": str(service)}
+                    mask_paths.append("service")
+
+                if price and int(price) > 0:
+                    update_fields["price"] = {"integerValue": str(int(price))}
+                    mask_paths.append("price")
 
             mask_query = "&".join([f"updateMask.fieldPaths={p}" for p in mask_paths])
             patch_url = f"https://firestore.googleapis.com/v1/{doc_name}?{mask_query}&key={FIREBASE_API_KEY}"
@@ -758,15 +801,16 @@ def handle_chat():
     greetings = {"hy", "hi", "hello", "hey", "ayubowan", "good morning", "good evening", "good afternoon", "halo", "hallo"}
     msg_cleaned = re.sub(r'[^a-zA-Z\s]', '', message.lower()).strip()
     is_simple_greeting = msg_cleaned in greetings or (len(msg_cleaned.split()) <= 2 and any(g in msg_cleaned.split() for g in greetings))
+    is_ack = is_conversational_ack(message)
 
     should_save = False
     if is_escalated:
         should_save = True
-    elif is_booking_intent:
+    elif is_booking_intent and not is_ack:
         should_save = True
-    elif is_lead:
+    elif is_lead and not is_ack:
         should_save = True
-    elif is_auth_client and not is_simple_greeting:
+    elif is_auth_client and not is_simple_greeting and not is_ack:
         should_save = True
 
     if clean_user_phone and should_save:

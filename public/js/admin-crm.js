@@ -788,14 +788,14 @@ function renderCRMTable() {
                     </div>
                 </td>
                 <td>
-                    <strong>${escapeHtml(item.service || 'General Service')}</strong>
-                    <span class="sub-text">${item.duration || 45} mins</span>
+                    <strong>${escapeHtml((item.isEscalated || item.status === 'Escalated') && (!item.service || !item.service.includes('Escalation')) ? 'URGENT: Customer Escalation Case' : (item.service || 'General Service'))}</strong>
+                    <span class="sub-text">${(item.isEscalated || item.status === 'Escalated') ? 'Urgent Priority' : (item.duration || 45) + ' mins'}</span>
                 </td>
                 <td>
                     <strong>${escapeHtml(item.bookingDate || '--')}</strong>
                     <span class="slot-pill" title="Booking submitted at (SLST)">${escapeHtml(displayTime)}</span>
                 </td>
-                <td><strong>Rs. ${Number(item.price || 0).toLocaleString()}</strong></td>
+                <td><strong>Rs. ${Number((item.isEscalated || item.status === 'Escalated') ? 0 : (item.price || 0)).toLocaleString()}</strong></td>
                 <td><span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Pending')}</span></td>
                 <td onclick="event.stopPropagation()">
                     <div class="action-buttons-group">
@@ -1245,8 +1245,17 @@ window.openBookingDetailModal = function(id) {
     document.getElementById('bmModalId').textContent = `Record ID: ${item.id} • Channel: ${item.channel || 'web'}`;
     document.getElementById('bmCustomerName').textContent = item.customerName || 'Valued Client';
     document.getElementById('bmCustomerPhone').textContent = item.customerPhone || 'Not provided';
-    document.getElementById('bmServiceName').textContent = item.service || 'General Service';
-    document.getElementById('bmServicePrice').textContent = `Rs. ${Number(item.price || 0).toLocaleString()}`;
+    const isEscalated = (item.status === 'Escalated' || item.isEscalated === true || (item.service && item.service.includes('Escalation')));
+    
+    if (isEscalated) {
+        document.getElementById('bmServiceName').textContent = (item.service && item.service.includes('Escalation'))
+            ? item.service 
+            : 'URGENT: Customer Escalation Case';
+        document.getElementById('bmServicePrice').textContent = 'Rs. 0';
+    } else {
+        document.getElementById('bmServiceName').textContent = item.service || 'General Service';
+        document.getElementById('bmServicePrice').textContent = `Rs. ${Number(item.price || 0).toLocaleString()}`;
+    }
     
     const displayTime = item.requestedSlot || item.bookingTime || item.submissionTime || '--:--';
     document.getElementById('bmSubmissionTime').textContent = `${displayTime} (Date: ${item.bookingDate || '--'})`;
@@ -1258,7 +1267,18 @@ window.openBookingDetailModal = function(id) {
     else if (item.status === 'Escalated') statusClass = 'status-cancelled';
 
     document.getElementById('bmStatusBadge').innerHTML = `<span class="status-badge ${statusClass}">${escapeHtml(item.status || 'Pending')}</span>`;
-    document.getElementById('bmInquiryText').textContent = item.inquiry || item.inquiry_text || 'No extra notes provided.';
+    
+    let rawInquiry = (item.inquiry || item.inquiry_text || '').trim();
+    if (isEscalated) {
+        const cleanAckWords = ['okay', 'ok', 'hri', 'hari', 'fine', 'thanks', 'ela'];
+        if (!rawInquiry || cleanAckWords.includes(rawInquiry.toLowerCase())) {
+            let cleanReason = (item.escalationReason || 'Customer reported a service delay/concern')
+                .replace(/^AI Concierge Escalated:\s*['"]?/, '')
+                .replace(/['"]$/, '');
+            rawInquiry = cleanReason;
+        }
+    }
+    document.getElementById('bmInquiryText').textContent = rawInquiry || 'No extra notes provided.';
 
     // WhatsApp quick link
     const cleanPhone = normalizePhone(item.customerPhone);
@@ -1267,7 +1287,9 @@ window.openBookingDetailModal = function(id) {
     if (waLink) {
         if (cleanPhone) {
             waLink.style.display = 'inline-flex';
-            const msg = encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon regarding your appointment for ${item.service} booked at ${displayTime}.`);
+            const msg = isEscalated
+                ? encodeURIComponent(`Dear ${item.customerName || 'Valued Client'}, this is the Salon Director at Chanu Salon regarding your feedback: "${rawInquiry}". I am personally following up to make sure you are 100% taken care of.`)
+                : encodeURIComponent(`Hello ${item.customerName || 'Valued Client'}! This is Chanu Salon regarding your appointment for ${item.service} booked at ${displayTime}.`);
             waLink.href = `https://wa.me/${intlPhone}?text=${msg}`;
         } else {
             waLink.style.display = 'none';
